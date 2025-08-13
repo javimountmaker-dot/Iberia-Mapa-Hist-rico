@@ -1,28 +1,28 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Mapa histórico — Rutas MVP</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    html, body, #map { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, sans-serif; }
-    .topbar { position:absolute; top:8px; left:8px; right:8px; z-index:999; background:rgba(255,255,245,0.95); border:1px solid #ddd; border-radius:12px; padding:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); display:grid; grid-template-columns: 1fr auto auto auto auto; gap:8px; align-items:center; }
-    .tools { position:absolute; bottom:8px; left:8px; right:8px; z-index:999; display:grid; gap:8px; }
-    .panel { background:rgba(255,255,245,0.95); border:1px solid #ddd; border-radius:12px; padding:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); }
-    .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-    .row > * { margin: 2px 0; }
-    label { font-size: 13px; color:#333; }
-    input[type=range] { width: 180px; }
-    select, button { padding:6px 10px; border-radius:8px; border:1px solid #ccc; background:#fff; }
-    button { cursor:pointer; }
-    button:active { transform: translateY(1px); }
-    .pill { padding:2px 6px; border:1px solid #aaa; border-radius:999px; font-size:12px; background:#fff; }
-    .legend { font-size:12px; line-height:1.4; }
-    .out { font-size:13px; }
-    .stop-label { background:#fff; border:1px solid #aaa; padding:2px 4px; border-radius:6px; font-size:11px; }
-    .toast { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); background:#222; color:#fff; padding:8px 12px; border-radius:10px; font-size:13px; opacity:0.95; z-index:2000; display:none; }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Mapa histórico — Rutas MVP</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  html,body,#map{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica,Arial,sans-serif}
+  .topbar{position:absolute;top:8px;left:8px;right:8px;z-index:999;background:rgba(255,255,245,.96);border:1px solid #ddd;border-radius:12px;padding:8px;box-shadow:0 2px 8px rgba(0,0,0,.15);display:grid;grid-template-columns:1fr auto auto auto auto;gap:8px;align-items:center}
+  .tools{position:absolute;bottom:8px;left:8px;right:8px;z-index:999;display:grid;gap:8px}
+  .panel{background:rgba(255,255,245,.96);border:1px solid #ddd;border-radius:12px;padding:8px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .row>*{margin:2px 0}
+  label{font-size:13px;color:#333}
+  input[type=range]{width:180px}
+  select,button{padding:6px 10px;border-radius:8px;border:1px solid #ccc;background:#fff}
+  button{cursor:pointer}
+  button:active{transform:translateY(1px)}
+  .pill{padding:2px 6px;border:1px solid #aaa;border-radius:999px;font-size:12px;background:#fff}
+  .legend{font-size:12px;line-height:1.4}
+  .out{font-size:13px}
+  .stop-label{background:#fff;border:1px solid #aaa;padding:2px 4px;border-radius:6px;font-size:11px}
+  .status{position:absolute;top:74px;left:8px;z-index:1000;background:#000;color:#fff;padding:6px 10px;border-radius:10px;opacity:.85;font-size:12px}
+</style>
 </head>
 <body>
 <div id="map"></div>
@@ -31,7 +31,7 @@
   <div><strong id="title"></strong></div>
   <div class="row">
     <label id="lbl-year"></label>
-    <input id="year" type="range" min="201" max="300" value="218" step="1" />
+    <input id="year" type="range" min="201" max="300" value="218" step="1"/>
     <span id="year-display">218</span> <span id="era-display"></span>
   </div>
   <div class="row">
@@ -44,9 +44,10 @@
   </div>
   <div class="row">
     <label id="lbl-basemap"></label>
-    <select id="basemap"><option value="osm">osm</option><option value="sat">sat</option></select>
+    <select id="basemap"><option value="osm" selected>osm</option><option value="sat">sat</option></select>
   </div>
 </div>
+<div id="status" class="status">...</div>
 
 <div class="tools">
   <div class="panel legend">
@@ -75,6 +76,10 @@
     <div class="row">
       <button id="btnA">A</button>
       <button id="btnB">B</button>
+      <span id="coordsA"></span>
+      <span id="coordsB"></span>
+    </div>
+    <div class="row">
       <button id="btnCalc">calc</button>
       <button id="btnClear">clear</button>
     </div>
@@ -82,24 +87,22 @@
   </div>
 </div>
 
-<div id="toast" class="toast"></div>
-
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// --- Helpers / i18n / fetch with cache-busting ---
+// --------- Helpers & i18n ---------
 const CONST = { ROMAN_MILE_KM: 1.48, GREEK_STADION_M: 185 };
-let i18n = {}; let lang='es';
+let I18N = { es:{}, en:{} }, lang='es';
 
-function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.style.display='block'; setTimeout(()=>el.style.display='none', 2200); }
+function cacheBuster(url){ const v = 'v='+(new Date().getTime()); return url+(url.includes('?')?'&':'?')+v; }
 async function loadJSON(u){
-  const url = u + (u.includes('?') ? '&' : '?') + 'v=' + Date.now();
-  const r = await fetch(url);
-  if (!r.ok){ throw new Error('No se pudo cargar '+u); }
+  const r = await fetch(cacheBuster(u));
+  if (!r.ok) throw new Error('Fetch failed: '+u);
   return r.json();
 }
-function t(k){ return (i18n[lang] && i18n[lang][k]) || k; }
+function t(k){ return (I18N[lang] && I18N[lang][k]) || k; }
+function setStatus(msg){ document.getElementById('status').textContent = msg; }
 
-// Speeds (km/h + hours/day)
+// Speeds
 const SPEEDS = {
   foot_baggage:  { kmh: 23.68/6, hoursPerDay: 6,  breaksPerDay: 0 },
   foot_double:   { kmh: 47.36/12, hoursPerDay: 12, breaksPerDay: 1 },
@@ -122,74 +125,87 @@ function updateTexts(){
   document.getElementById('legend-settlements').innerText = t('settlements');
   document.getElementById('legend-maritime').innerText = t('maritime_routes');
   document.getElementById('lbl-basemap').innerText = t('basemap')+':';
-  const bs = document.getElementById('basemap');
-  bs.querySelector('option[value="osm"]').textContent = t('osm');
-  bs.querySelector('option[value="sat"]').textContent = t('sat');
+  const bm = document.getElementById('basemap');
+  bm.querySelector('option[value="osm"]').textContent = t('osm');
+  bm.querySelector('option[value="sat"]').textContent = t('sat');
   document.getElementById('lbl-modes').innerText = t('modes')+':';
-  const mSel=document.getElementById('mode');
-  mSel.querySelector('option[value="foot_baggage"]').textContent=t('foot_baggage');
-  mSel.querySelector('option[value="foot_double"]').textContent=t('foot_double');
-  mSel.querySelector('option[value="foot_forced"]').textContent=t('foot_forced');
-  mSel.querySelector('option[value="mountain_pass"]').textContent=t('mountain_pass');
-  mSel.querySelector('option[value="trireme"]').textContent=t('trireme');
-  document.getElementById('lbl-follow').innerText = t('follow_label');
-  document.getElementById('lbl-auto').innerText = t('auto_label');
+  const m = document.getElementById('mode');
+  m.querySelector('option[value="foot_baggage"]').textContent = t('foot_baggage');
+  m.querySelector('option[value="foot_double"]').textContent = t('foot_double');
+  m.querySelector('option[value="foot_forced"]').textContent = t('foot_forced');
+  m.querySelector('option[value="mountain_pass"]').textContent = t('mountain_pass');
+  m.querySelector('option[value="trireme"]').textContent = t('trireme');
+  document.getElementById('lbl-follow').innerText = t('follow_roads');
+  document.getElementById('lbl-auto').innerText = t('auto_mountain');
   document.getElementById('btnA').textContent = t('pick_A');
   document.getElementById('btnB').textContent = t('pick_B');
   document.getElementById('btnCalc').textContent = t('calculate');
   document.getElementById('btnClear').textContent = t('clear');
 }
 
-// Temporal logic
-function bcYear(){ return parseInt(document.getElementById('year').value,10); }
-function isActiveByTemporal(p, y){
-  const sy = p.start_year || 300, se = p.start_era || 'BC', ey = p.end_year || 201, ee = p.end_era || 'BC';
-  const startBC = (se === 'BC') ? sy : 0;
-  const endBC = (ee === 'BC') ? ey : 0;
-  return (y <= startBC) && (y >= endBC);
-}
+// --------- Map & basemaps ---------
+let map = L.map('map', { minZoom:5, maxZoom:12 }).setView([40,-3.5],6);
+const baseOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'&copy; OpenStreetMap', maxZoom:19 });
+const baseSAT = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{x}/{y}',{ attribution:'Esri, Maxar', maxZoom:19 });
+baseOSM.addTo(map);
+let currentBase = 'osm';
+document.getElementById('basemap').addEventListener('change', e=>{
+  const v = e.target.value;
+  if (v===currentBase) return;
+  if (v==='sat'){ map.removeLayer(baseOSM); baseSAT.addTo(map); }
+  else { map.removeLayer(baseSAT); baseOSM.addTo(map); }
+  currentBase = v;
+});
 
-// Styles
+// --------- Data layers ---------
+let layers={}, allGeojson={};
 function styleFor(feature){
-  const p = feature.properties || {};
-  if (p.type === 'rio') return { color:'#1f78b4', weight:3, opacity:0.9 };
-  if (p.type === 'costa') return { color:'#3957a6', weight:2, opacity:0.5, dashArray:'4,6' };
-  if (p.type === 'calzada') return { color:'#6b4e16', weight:2.5 };
-  if (p.type === 'camino') return { color:'#8a6d3b', weight:2, dashArray:'6,6' };
-  if (feature.geometry.type === 'Polygon'){
-    const tok=p.color_token||'default'; const colors={iberian:'#e7c0a8',default:'#d9d2c6'};
-    return { color:'#634b36', weight:1, fillColor:colors[tok]||colors.default, fillOpacity:0.3 };
-  }
+  const p=feature.properties||{};
+  if (p.type==='rio') return { color:'#1f78b4', weight:3, opacity:0.9 };
+  if (p.type==='costa') return { color:'#3957a6', weight:2, opacity:0.5, dashArray:'4,6' };
+  if (p.type==='calzada') return { color:'#6b4e16', weight:2.5 };
+  if (p.type==='camino') return { color:'#8a6d3b', weight:2, dashArray:'6,6' };
+  if (feature.geometry.type==='Polygon') return { color:'#634b36', weight:1, fillColor:'#e7c0a8', fillOpacity:0.3 };
   return { radius:5, color:'#333', fillColor:'#ffe08a', fillOpacity:0.9 };
 }
-function pointToLayer(f,ll){ return L.circleMarker(ll, styleFor(f)); }
+function pointToLayer(f,latlng){ return L.circleMarker(latlng, styleFor(f)); }
 function onEachFeature(f,layer){
   const p=f.properties||{};
   const tip = `<strong>${p.name||p.id||'—'}</strong><div>${p.alt_names||''}</div>
   <div>${p.culture? p.culture : (p.type||'')}</div>
-  <div>${(p.start_year||'?')} ${(p.start_era||'BC')} → ${(p.end_year||'?')} ${(p.end_era||'BC')}</div>
-  ${p.source? `<div><em>src:</em> ${p.source}</div>`:''}
-  ${p.certainty? `<div><em>incertid.:</em> ${p.certainty}</div>`:''}`;
+  <div>${(p.start_year||'?')} ${(p.start_era||'BC')} → ${(p.end_year||'?')} ${(p.end_era||'BC')}</div>`;
   layer.bindTooltip(tip);
 }
 
-// Map + basemaps
-let map, basemapOSM, basemapSAT;
-let layers={}, allGeojson={}, roadGraph=null;
-
-function initMap(){
-  map = L.map('map', { minZoom:5, maxZoom:12 }).setView([40,-3.5],6);
-  basemapOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'&copy; OpenStreetMap', maxZoom:12 }).addTo(map);
-  basemapSAT = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{x}/{y}',{ attribution:'Esri, Maxar, Earthstar Geographics, and the GIS User Community', maxZoom:19 });
-  document.getElementById('basemap').addEventListener('change', (e)=>{
-    const v=e.target.value;
-    if (v==='sat'){ if (map.hasLayer(basemapOSM)) map.removeLayer(basemapOSM); basemapSAT.addTo(map); }
-    else { if (map.hasLayer(basemapSAT)) map.removeLayer(basemapSAT); basemapOSM.addTo(map); }
-  });
+function bcYear(){ return parseInt(document.getElementById('year').value,10); }
+function isActiveByTemporal(p, y){
+  const sy=p.start_year??300, se=p.start_era??'BC', ey=p.end_year??201, ee=p.end_era??'BC';
+  const sb = se==='BC' ? sy : 0;
+  const eb = ee==='BC' ? ey : 0;
+  return y <= sb && y >= eb;
+}
+function refreshVisibility(){
+  const y = bcYear();
+  document.getElementById('year-display').textContent = y;
+  for (const [k,layer] of Object.entries(layers)){
+    if (!allGeojson[k]) continue;
+    layer.clearLayers();
+    const feats = (allGeojson[k].features||[]).filter(f=>isActiveByTemporal(f.properties||{}, y));
+    layer.addData({type:'FeatureCollection', features:feats});
+  }
 }
 
-async function loadLayers(){
-  const files = {
+// --------- Load all ---------
+async function loadAll(){
+  try{
+    I18N.es = await loadJSON('i18n/es.json');
+    I18N.en = await loadJSON('i18n/en.json');
+    lang='es';
+    updateTexts();
+    setStatus(t('status_ready'));
+  }catch(e){ setStatus('i18n error: '+e.message); console.error(e); }
+
+  const files={
     settlements:'data/toponimos.geojson',
     roads:'data/vias.geojson',
     rivers:'data/rios.geojson',
@@ -205,43 +221,31 @@ async function loadLayers(){
       allGeojson[k]=gj;
       const layer = L.geoJSON(gj,{style:styleFor,pointToLayer,onEachFeature});
       layers[k]=layer;
-    }catch(err){
-      console.error(err);
-      toast('Error cargando '+u);
-      layers[k]=L.layerGroup();
-      allGeojson[k]={type:'FeatureCollection',features:[]};
+    }catch(e){
+      console.error('Error loading',u,e);
     }
   }
-  layers.rivers.addTo(map);
-  layers.roads.addTo(map);
-  layers.settlements.addTo(map);
-  layers.polities.addTo(map);
+  // add default visible
+  layers.rivers && layers.rivers.addTo(map);
+  layers.roads && layers.roads.addTo(map);
+  layers.settlements && layers.settlements.addTo(map);
+  layers.polities && layers.polities.addTo(map);
+
+  refreshVisibility();
 }
 
-function refreshVisibility(){
-  const y = bcYear();
-  document.getElementById('year-display').innerText = y.toString();
-  document.getElementById('era-display').innerText = lang==='es' ? t('era_bc') : t('era_bc');
-  for (const [k,layer] of Object.entries(layers)){
-    layer.clearLayers();
-    const gj = allGeojson[k];
-    const filtered = { type:'FeatureCollection', features: (gj.features||[]).filter(f => isActiveByTemporal(f.properties||{}, y)) };
-    layer.addData(filtered);
-  }
-}
-
-// Haversine
+// --------- Graph & routing ---------
 function haversine(lat1,lon1,lat2,lon2){
   const toRad = d => d*Math.PI/180, R=6371.0088;
   const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
-  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*sin2(dLon/2);
   return 2*R*Math.asin(Math.sqrt(a));
 }
+function sin2(x){return Math.sin(x)**2;}
 
-// Build road graph with terrain per segment
 function buildRoadGraph(gj){
-  const nodes=[], adj=[];
-  const keyIndex = new Map();
+  const nodes=[], adj=[]; const keyIndex = new Map();
+  const edgeTerrain = new Map(); // key "u>v" -> terrain
   function key(lon,lat){ return lon.toFixed(6)+','+lat.toFixed(6); }
   function addNode(lon,lat){
     const k=key(lon,lat);
@@ -249,20 +253,21 @@ function buildRoadGraph(gj){
     const idx=nodes.length; nodes.push([lat,lon]); keyIndex.set(k,idx); adj[idx]=[]; return idx;
   }
   function addEdge(a,b,w,terrain){
-    adj[a].push({to:b,w,terrain}); adj[b].push({to:a,w,terrain});
+    adj[a].push({to:b,w}); adj[b].push({to:a,w});
+    edgeTerrain.set(a+'>'+b, terrain); edgeTerrain.set(b+'>'+a, terrain);
   }
   for (const f of (gj.features||[])){
     if (!f.geometry || f.geometry.type!=='LineString') continue;
     const terrain = (f.properties && f.properties.terrain) ? f.properties.terrain : 'flat';
-    const coords=f.geometry.coordinates;
-    for (let i=1;i<coords.length;i++){
-      const [lon1,lat1]=coords[i-1], [lon2,lat2]=coords[i];
+    const c=f.geometry.coordinates;
+    for (let i=1;i<c.length;i++){
+      const [lon1,lat1]=c[i-1], [lon2,lat2]=c[i];
       const a=addNode(lon1,lat1), b=addNode(lon2,lat2);
       const w=haversine(lat1,lon1,lat2,lon2);
       addEdge(a,b,w,terrain);
     }
   }
-  return {nodes, adj};
+  return {nodes, adj, edgeTerrain};
 }
 function nearestNodeIdx(graph, lat, lon){
   let best=-1, bestD=1e12;
@@ -274,10 +279,7 @@ function nearestNodeIdx(graph, lat, lon){
   return best;
 }
 function dijkstra(graph, s, t){
-  const N=graph.nodes.length;
-  const dist=new Array(N).fill(Infinity);
-  const prev=new Array(N).fill(-1);
-  const used=new Array(N).fill(false);
+  const N=graph.nodes.length, dist=new Array(N).fill(Infinity), prev=new Array(N).fill(-1), used=new Array(N).fill(false);
   dist[s]=0;
   for (let it=0; it<N; it++){
     let u=-1, best=Infinity;
@@ -285,221 +287,215 @@ function dijkstra(graph, s, t){
     if (u===-1) break;
     if (u===t) break;
     used[u]=true;
-    const edges = graph.adj[u] || [];
-    for (let j=0; j<edges.length; j++){
-      const e = edges[j];
+    for (const e of graph.adj[u]){
       const alt=dist[u]+e.w;
       if (alt<dist[e.to]){ dist[e.to]=alt; prev[e.to]=u; }
     }
   }
   if (dist[t]===Infinity) return null;
-  const path=[]; let u=t;
-  while (u!==-1){ path.push(u); u=prev[u]; }
-  path.reverse(); return path;
+  const path=[]; let u=t; while (u!==-1){ path.push(u); u=prev[u]; } path.reverse(); return path;
 }
-
 function routeViaRoads(graph, A, B){
   if (!graph || !graph.nodes.length) return null;
-  const idxA = graph.nodes.length; const idxB = graph.nodes.length+1;
-  const nodes = graph.nodes.slice(); const adj = graph.adj.map(a=>a.slice());
+  const nodes = graph.nodes.slice(), adj = graph.adj.map(a=>a.slice()), edgeT = new Map(graph.edgeTerrain);
+  const idxA = nodes.length, idxB = nodes.length+1;
   nodes.push([A.lat,A.lng]); adj[idxA]=[];
   nodes.push([B.lat,B.lng]); adj[idxB]=[];
   const nA = nearestNodeIdx(graph, A.lat, A.lng);
   const nB = nearestNodeIdx(graph, B.lat, B.lng);
   function connect(u,v){
     const d=haversine(nodes[u][0],nodes[u][1],nodes[v][0],nodes[v][1]);
-    adj[u].push({to:v,w:d,terrain:'flat'}); adj[v].push({to:u,w:d,terrain:'flat'});
+    adj[u].push({to:v,w:d}); adj[v].push({to:u,w:d});
+    edgeT.set(u+'>'+v,'flat'); edgeT.set(v+'>'+u,'flat');
   }
-  if (nA>=0) connect(idxA, nA);
-  if (nB>=0) connect(idxB, nB);
-  const p = dijkstra({nodes,adj}, idxA, idxB);
-  if (!p) return null;
-  const coords=[]; const segs=[];
-  for (let i=1;i<p.length;i++){
-    const u=p[i-1], v=p[i];
+  if (nA>=0) connect(idxA,nA);
+  if (nB>=0) connect(idxB,nB);
+  const path = dijkstra({nodes,adj}, idxA, idxB);
+  if (!path) return null;
+  const segs=[]; const coords=[];
+  for (let i=1;i<path.length;i++){
+    const u=path[i-1], v=path[i];
     const Axy = nodes[u], Bxy = nodes[v];
+    const terr = edgeT.get(u+'>'+v) || 'flat';
+    const km = haversine(Axy[0],Axy[1],Bxy[0],Bxy[1]);
     coords.push([Axy[0],Axy[1]]);
-    // find terrain from edge
-    const e = (adj[u]||[]).find(e=>e.to===v) || {terrain:'flat', w:haversine(Axy[0],Axy[1],Bxy[0],Bxy[1])};
-    segs.push({from:[Axy[0],Axy[1]], to:[Bxy[0],Bxy[1]], km:e.w, terrain:e.terrain});
+    segs.push({from:[Axy[0],Axy[1]], to:[Bxy[0],Bxy[1]], km, terrain: terr==='mountain'?'mountain':'flat'});
   }
-  coords.push([nodes[p[p.length-1]][0], nodes[p[p.length-1]][1]]);
-  return { coords, segs };
+  coords.push([nodes[path[path.length-1]][0], nodes[path[path.length-1]][1]]);
+  return {coords,segs};
 }
 function routeStraight(A,B){
-  return { coords: [[A.lat,A.lng],[B.lat,B.lng]], segs: [{from:[A.lat,A.lng], to:[B.lat,B.lng], km: haversine(A.lat,A.lng,B.lat,B.lng), terrain:'flat'}] };
+  const km = haversine(A.lat,A.lng,B.lat,B.lng);
+  return { coords:[[A.lat,A.lng],[B.lat,B.lng]], segs:[{from:[A.lat,A.lng],to:[B.lat,B.lng],km,terrain:'flat'}] };
 }
 
-// Stops by time
-function interpolate(A, B, t){ return [ A[0] + t*(B[0]-A[0]), A[1] + t*(B[1]-A[1]) ]; }
+// Stops by hours
+function interpolate(A,B,t){ return [ A[0]+t*(B[0]-A[0]), A[1]+t*(B[1]-A[1]) ]; }
+function totalHours(segs, kmhForTerrain){ let H=0; for (const s of segs){ H += s.km / kmhForTerrain(s.terrain); } return H; }
 function placeStopsByTime(segs, hoursPerDay, kmhForTerrain){
-  let hoursAcc = 0.0, nextStopAt = hoursPerDay;
-  const stops = [];
-  for (let s of segs){
-    const v = kmhForTerrain(s.terrain);
-    const segHours = s.km / v;
-    while (hoursAcc + segHours >= nextStopAt - 1e-9){
-      const need = nextStopAt - hoursAcc;
-      const t = need / segHours;
-      const pt = interpolate(s.from, s.to, t);
-      stops.push(pt);
-      nextStopAt += hoursPerDay;
+  let hoursAcc=0, next=hoursPerDay; const pts=[];
+  for (const s of segs){
+    const v = kmhForTerrain(s.terrain), segH = s.km / v;
+    while (hoursAcc + segH >= next - 1e-9){
+      const need = next - hoursAcc, t = need / segH;
+      pts.push(interpolate(s.from, s.to, t));
+      next += hoursPerDay;
     }
-    hoursAcc += segHours;
+    hoursAcc += segH;
   }
-  return stops;
+  return pts;
 }
-function totalHours(segs, kmhForTerrain){
-  let H=0; for (let s of segs){ H += s.km / kmhForTerrain(s.terrain); } return H;
-}
-function placeMidBreaks(segs, baseHPD, breaksPerDay, kmhForTerrain){
+function placeMidBreaksByTime(segs, hoursPerDay, breaksPerDay, kmhForTerrain){
   if (!breaksPerDay) return [];
   const totalH = totalHours(segs, kmhForTerrain);
-  const dayCount = Math.ceil(totalH / baseHPD);
-  const targets = [];
+  const dayCount = Math.ceil(totalH / hoursPerDay);
+  const targets=[];
   for (let d=0; d<dayCount; d++){
     for (let j=1; j<=breaksPerDay; j++){
-      targets.push(d*baseHPD + (j*(baseHPD/(breaksPerDay+1))));
+      targets.push(d*hoursPerDay + j*(hoursPerDay/(breaksPerDay+1)));
     }
   }
-  const pts=[];
-  let hAcc=0.0, tIdx=0;
-  for (let s of segs){
-    const v = kmhForTerrain(s.terrain);
-    const segH = s.km / v;
-    while (tIdx < targets.length && hAcc + segH >= targets[tIdx] - 1e-9){
-      const need = targets[tIdx] - hAcc;
-      const tt = need / segH;
-      pts.push(interpolate(s.from, s.to, tt));
-      tIdx++;
+  const pts=[]; let acc=0; let ti=0;
+  for (const s of segs){
+    const v = kmhForTerrain(s.terrain), segH = s.km / v;
+    while (ti<targets.length && acc + segH >= targets[ti] - 1e-9){
+      const need = targets[ti] - acc;
+      const t = need / segH;
+      pts.push(interpolate(s.from, s.to, t));
+      ti++;
     }
-    hAcc += segH;
-    if (tIdx>=targets.length) break;
+    acc += segH;
+    if (ti>=targets.length) break;
   }
   return pts;
 }
 
-// Route drawing
-let A=null, B=null, markerA=null, markerB=null, routeLayer=null, nightStopsLayer=null, breakStopsLayer=null, segLayer=null;
-function drawRouteSegments(route){
-  if (segLayer){ map.removeLayer(segLayer); segLayer=null; }
+// Draw helpers
+let routeLayer=null, nightStopsLayer=null, breakStopsLayer=null, segLayer=null;
+function clearRouteLayers(){
+  for (const LYR of [routeLayer, nightStopsLayer, breakStopsLayer, segLayer]){
+    if (LYR){ map.removeLayer(LYR); }
+  }
+  routeLayer=nightStopsLayer=breakStopsLayer=segLayer=null;
+}
+function drawSegments(route){
+  if (segLayer) map.removeLayer(segLayer);
   segLayer = L.layerGroup();
-  for (let s of route.segs){
-    const style = (s.terrain==='mountain') ? { color:'#a33', weight:4, dashArray:'6,4' } : { color:'#333', weight:3 };
+  for (const s of route.segs){
+    const style = s.terrain==='mountain'? {color:'#a33', weight:4, dashArray:'6,4'} : {color:'#333', weight:3};
     L.polyline([s.from, s.to], style).addTo(segLayer);
   }
   segLayer.addTo(map);
 }
-function showRoute(route, mode, autoMountain){
-  if (routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
-  routeLayer = L.polyline(route.coords, { color:'#000', weight:2, opacity:0.2 }).addTo(map);
-  map.fitBounds(routeLayer.getBounds(), { padding:[30,30] });
 
+// --------- UI: slider, language, picking A/B ---------
+document.getElementById('year').addEventListener('input', ()=> refreshVisibility());
+document.getElementById('lang').addEventListener('change', (e)=>{ lang = e.target.value; updateTexts(); });
+
+let picking='', A=null, B=null, markerA=null, markerB=null;
+document.getElementById('btnA').addEventListener('click', ()=>{ picking='A'; setStatus(t('status_pickA')); });
+document.getElementById('btnB').addEventListener('click', ()=>{ picking='B'; setStatus(t('status_pickB')); });
+document.getElementById('btnClear').addEventListener('click', ()=>{
+  picking=''; clearRouteLayers();
+  if (markerA){ map.removeLayer(markerA); markerA=null; }
+  if (markerB){ map.removeLayer(markerB); markerB=null; }
+  A=B=null; document.getElementById('coordsA').textContent=''; document.getElementById('coordsB').textContent='';
+  document.getElementById('summary').innerHTML=''; setStatus(t('status_ready'));
+});
+
+map.on('click', e=>{
+  if (!picking) return;
+  if (picking==='A'){
+    A = { lat:e.latlng.lat, lng:e.latlng.lng };
+    if (markerA) map.removeLayer(markerA);
+    markerA = L.marker([A.lat,A.lng]).addTo(map).bindTooltip(t('a_marker')).openTooltip();
+    document.getElementById('coordsA').textContent = `A: ${t('lat')} ${A.lat.toFixed(4)}, ${t('lng')} ${A.lng.toFixed(4)}`;
+    picking=''; setStatus(t('status_ready'));
+  } else if (picking==='B'){
+    B = { lat:e.latlng.lat, lng:e.latlng.lng };
+    if (markerB) map.removeLayer(markerB);
+    markerB = L.marker([B.lat,B.lng]).addTo(map).bindTooltip(t('b_marker')).openTooltip();
+    document.getElementById('coordsB').textContent = `B: ${t('lat')} ${B.lat.toFixed(4)}, ${t('lng')} ${B.lng.toFixed(4)}`;
+    picking=''; setStatus(t('status_ready'));
+  }
+});
+
+// Calculate
+document.getElementById('btnCalc').addEventListener('click', ()=>{
+  if (!A || !B){ setStatus('Selecciona A y B'); return; }
+  const mode = document.getElementById('mode').value;
+  const follow = document.getElementById('chk-roads').checked;
+  const autoMountain = document.getElementById('chk-auto').checked;
+
+  let route = null;
+  if (follow && allGeojson.roads){
+    route = routeViaRoads(roadGraph, A, B);
+    if (!route) route = routeStraight(A,B);
+  } else route = routeStraight(A,B);
+
+  // draw segments colored
+  drawSegments(route);
+
+  // speed/season functions
   const season = document.getElementById('season').value;
   function kmhForTerrain(terrain){
-    if (mode==='trireme'){ let v=SPEEDS.trireme.kmh; if (season==='winter') v*=0.85; return v; }
+    if (mode==='trireme'){
+      let v=SPEEDS.trireme.kmh; if (season==='winter') v*=0.85; return v;
+    }
     if (autoMountain && terrain==='mountain') return SPEEDS.mountain_pass.kmh;
     return SPEEDS[mode].kmh;
   }
-  const baseHPD = (mode==='trireme') ? SPEEDS.trireme.hoursPerDay : SPEEDS[mode].hoursPerDay;
+  const hoursPerDay = (mode==='trireme') ? SPEEDS.trireme.hoursPerDay : SPEEDS[mode].hoursPerDay;
+  const breaksPerDay = (mode==='trireme') ? 0 : SPEEDS[mode].breaksPerDay;
+
   const kmTotal = route.segs.reduce((a,s)=>a+s.km,0);
   const roman = kmTotal / CONST.ROMAN_MILE_KM;
   const stadia = (kmTotal*1000) / CONST.GREEK_STADION_M;
+
   const H = totalHours(route.segs, kmhForTerrain);
-  const days = Math.floor(H / baseHPD);
-  const hours = Math.round(H - days*baseHPD);
-  const restNights = Math.max(0, Math.ceil(H / baseHPD) - 1);
-  const nightStops = placeStopsByTime(route.segs, baseHPD, kmhForTerrain);
-  const breaksPerDay = (mode==='trireme') ? 0 : SPEEDS[mode].breaksPerDay;
-  const midBreaks = placeMidBreaks(route.segs, baseHPD, breaksPerDay, kmhForTerrain);
+  const days = Math.floor(H / hoursPerDay);
+  const hours = Math.round(H - days*hoursPerDay);
+  const restNights = Math.max(0, Math.ceil(H / hoursPerDay) - 1);
 
-  if (nightStopsLayer){ map.removeLayer(nightStopsLayer); nightStopsLayer=null; }
-  nightStopsLayer = L.layerGroup();
-  nightStops.forEach((p,i)=>{
-    L.circleMarker(p, { radius:5, color:'#b00', fillColor:'#e33', fillOpacity:0.9 })
+  // stops
+  const nightStops = placeStopsByTime(route.segs, hoursPerDay, kmhForTerrain);
+  const midBreaks = placeMidBreaksByTime(route.segs, hoursPerDay, breaksPerDay, kmhForTerrain);
+
+  clearRouteLayers();
+  // overall polyline
+  routeLayer = L.polyline(route.coords, { color:'#000', weight:2, opacity:0.3 }).addTo(map);
+  drawSegments(route);
+
+  nightStopsLayer = L.layerGroup(); nightStops.forEach((p,i)=>{
+    L.circleMarker([p[0],p[1]],{radius:5,color:'#b00',fillColor:'#e33',fillOpacity:0.9})
       .bindTooltip(`<span class="stop-label">${t('night_stops')} #${i+1}</span>`).addTo(nightStopsLayer);
-  });
-  nightStopsLayer.addTo(map);
+  }); nightStopsLayer.addTo(map);
 
-  if (breakStopsLayer){ map.removeLayer(breakStopsLayer); breakStopsLayer=null; }
-  breakStopsLayer = L.layerGroup();
-  midBreaks.forEach((p,i)=>{
-    L.circleMarker(p, { radius:4, color:'#cc9a00', fillColor:'#ffd000', fillOpacity:0.9 })
+  breakStopsLayer = L.layerGroup(); midBreaks.forEach((p,i)=>{
+    L.circleMarker([p[0],p[1]],{radius:4,color:'#cc9a00',fillColor:'#ffd000',fillOpacity:0.9})
       .bindTooltip(`<span class="stop-label">${t('mid_breaks')} #${i+1}</span>`).addTo(breakStopsLayer);
-  });
-  breakStopsLayer.addTo(map);
+  }); breakStopsLayer.addTo(map);
 
-  document.getElementById('summary').innerHTML = `
-    <div><strong>${t('distance')}:</strong> ${kmTotal.toFixed(2)} km · ${roman.toFixed(2)} ${t('roman_miles')} · ${Math.round(stadia)} ${t('greek_stadia')}</div>
-    <div><strong>${t('time_estimate')}:</strong> ${days} d + ${hours} h — ${t('rest_nights')}: ${restNights} · ${t('day_breaks')}: ${breaksPerDay||0}/día</div>
-  `;
+  map.fitBounds(routeLayer.getBounds(), {padding:[30,30]});
+
+  document.getElementById('summary').innerHTML =
+    `<div><strong>${t('distance')}:</strong> ${kmTotal.toFixed(2)} km · ${roman.toFixed(2)} ${t('roman_miles')} · ${Math.round(stadia)} ${t('greek_stadia')}</div>
+     <div><strong>${t('time_estimate')}:</strong> ${days} d + ${hours} h — ${t('rest_nights')}: ${restNights} · ${t('day_breaks')}: ${breaksPerDay||0}/día</div>`;
+
+  setStatus(t('status_ready'));
+});
+
+// Build graph after data load
+let roadGraph=null;
+function buildGraphAfterLoad(){
+  if (allGeojson.roads){ roadGraph = buildRoadGraph(allGeojson.roads); }
 }
 
-// UI wiring
-function setupUI(){
-  // Language default ES
-  lang = 'es';
-  document.getElementById('lang').value = 'es';
-
-  document.getElementById('year').addEventListener('input', refreshVisibility);
-  document.getElementById('lang').addEventListener('change', (e)=>{ lang=e.target.value; updateTexts(); });
-  document.getElementById('basemap').addEventListener('change', ()=>{}); // handler set in initMap
-
-  const btnA = document.getElementById('btnA');
-  const btnB = document.getElementById('btnB');
-  const btnCalc = document.getElementById('btnCalc');
-  const btnClear = document.getElementById('btnClear');
-
-  btnA.addEventListener('click', ()=>{
-    toast(t('pick_A')); map.once('click', (e)=>{
-      if (A) { map.removeLayer(markerA); }
-      A = e.latlng; markerA = L.marker(A).addTo(map).bindTooltip(t('a_marker')).openTooltip();
-    });
-  });
-  btnB.addEventListener('click', ()=>{
-    toast(t('pick_B')); map.once('click', (e)=>{
-      if (B) { map.removeLayer(markerB); }
-      B = e.latlng; markerB = L.marker(B).addTo(map).bindTooltip(t('b_marker')).openTooltip();
-    });
-  });
-  btnCalc.addEventListener('click', ()=>{
-    if (!A || !B){ toast('Selecciona A y B'); return; }
-    const mode = document.getElementById('mode').value;
-    const follow = document.getElementById('chk-roads').checked;
-    const autoM = document.getElementById('chk-auto').checked;
-    let route = null;
-    if (follow){
-      route = routeViaRoads(roadGraph, A, B);
-      if (!route){ route = routeStraight(A,B); }
-    } else {
-      route = routeStraight(A,B);
-    }
-    drawRouteSegments(route);
-    showRoute(route, mode, autoM);
-  });
-  btnClear.addEventListener('click', ()=>{
-    if (markerA){ map.removeLayer(markerA); markerA=null; } A=null;
-    if (markerB){ map.removeLayer(markerB); markerB=null; } B=null;
-    if (routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
-    if (nightStopsLayer){ map.removeLayer(nightStopsLayer); nightStopsLayer=null; }
-    if (breakStopsLayer){ map.removeLayer(breakStopsLayer); breakStopsLayer=null; }
-    if (segLayer){ map.removeLayer(segLayer); segLayer=null; }
-    document.getElementById('summary').innerHTML='';
-  });
-}
-
-// Boot
+// Init
 (async function init(){
-  try{
-    i18n.es = await loadJSON('i18n/es.json');
-    i18n.en = await loadJSON('i18n/en.json');
-  }catch(e){ console.error(e); }
-  updateTexts();
-  initMap();
-  await loadLayers();
-  refreshVisibility();
-  roadGraph = buildRoadGraph(allGeojson.roads);
-  setupUI();
-})();</script>
+  await loadAll();
+  buildGraphAfterLoad();
+})();
+</script>
 </body>
 </html>
