@@ -1,27 +1,27 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Mapa histórico — Rutas MVP</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    html, body, #map { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, sans-serif; }
-    .topbar { position:absolute; top:8px; left:8px; right:8px; z-index:999; background:rgba(255,255,245,0.95); border:1px solid #ddd; border-radius:12px; padding:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); display:grid; grid-template-columns: 1fr auto auto auto auto; gap:8px; align-items:center; }
-    .tools { position:absolute; bottom:8px; left:8px; right:8px; z-index:999; display:grid; gap:8px; }
-    .panel { background:rgba(255,255,245,0.95); border:1px solid #ddd; border-radius:12px; padding:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); }
-    .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-    .row > * { margin: 2px 0; }
-    label { font-size: 13px; color:#333; }
-    input[type=range] { width: 180px; }
-    select, button { padding:6px 10px; border-radius:8px; border:1px solid #ccc; background:#fff; }
-    button { cursor:pointer; }
-    button:active { transform: translateY(1px); }
-    .pill { padding:2px 6px; border:1px solid #aaa; border-radius:999px; font-size:12px; background:#fff; }
-    .legend { font-size:12px; line-height:1.4; }
-    .out { font-size:13px; }
-    .stop-label { background:#fff; border:1px solid #aaa; padding:2px 4px; border-radius:6px; font-size:11px; }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Mapa histórico — Rutas MVP</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  html, body, #map { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, sans-serif; }
+  .topbar { position:absolute; top:8px; left:8px; right:8px; z-index:999; background:rgba(255,255,245,0.95); border:1px solid #ddd; border-radius:12px; padding:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); display:grid; grid-template-columns: 1fr auto auto auto auto; gap:8px; align-items:center; }
+  .tools { position:absolute; bottom:8px; left:8px; right:8px; z-index:999; display:grid; gap:8px; }
+  .panel { background:rgba(255,255,245,0.95); border:1px solid #ddd; border-radius:12px; padding:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .row > * { margin: 2px 0; }
+  label { font-size: 13px; color:#333; }
+  input[type=range] { width: 180px; }
+  select, button { padding:6px 10px; border-radius:8px; border:1px solid #ccc; background:#fff; }
+  button { cursor:pointer; }
+  button:active { transform: translateY(1px); }
+  .pill { padding:2px 6px; border:1px solid #aaa; border-radius:999px; font-size:12px; background:#fff; }
+  .legend { font-size:12px; line-height:1.4; }
+  .out { font-size:13px; }
+  .stop-label { background:#fff; border:1px solid #aaa; padding:2px 4px; border-radius:6px; font-size:11px; }
+</style>
 </head>
 <body>
 <div id="map"></div>
@@ -35,7 +35,7 @@
   </div>
   <div class="row">
     <label id="lbl-lang"></label>
-    <select id="lang"><option value="es">ES</option><option value="en">EN</option></select>
+    <select id="lang"><option value="es" selected>ES</option><option value="en">EN</option></select>
   </div>
   <div class="row">
     <label id="lbl-season"></label>
@@ -43,7 +43,7 @@
   </div>
   <div class="row">
     <label id="lbl-basemap"></label>
-    <select id="basemap"><option value="osm">osm</option><option value="sat">sat</option></select>
+    <select id="basemap"><option value="osm" selected>osm</option><option value="sat">sat</option></select>
   </div>
 </div>
 
@@ -84,9 +84,8 @@
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const CONST = { ROMAN_MILE_KM: 1.48, GREEK_STADION_M: 185 };
-let i18n = {}; let lang='es';
+let i18n = {}; let lang='es'; // default Spanish
 
-// Speeds as specified
 const SPEEDS = {
   foot_baggage:  { kmh: 23.68/6, hoursPerDay: 6,  breaksPerDay: 0 },
   foot_double:   { kmh: 47.36/12, hoursPerDay: 12, breaksPerDay: 1 },
@@ -95,7 +94,11 @@ const SPEEDS = {
   trireme:       { kmh: 9.26,     hoursPerDay: 12, breaksPerDay: 0 }
 };
 
-async function loadJSON(u){ const r=await fetch(u); return r.json(); }
+async function loadJSON(u){
+  // cache-bust to avoid stale i18n/data
+  const r = await fetch(u + '?v=5_1');
+  return r.json();
+}
 function t(k){ return (i18n[lang] && i18n[lang][k]) || k; }
 function updateTexts(){
   document.getElementById('title').innerText = t('app_title');
@@ -161,14 +164,13 @@ function onEachFeature(f,layer){
 
 // Map + basemaps
 let map = L.map('map', { minZoom:5, maxZoom:12 }).setView([40,-3.5],6);
-const basemapOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'&copy; OpenStreetMap', maxZoom:12 });
+const basemapOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'&copy; OpenStreetMap contributors', maxZoom:12 }).addTo(map);
 const basemapSAT = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{x}/{y}',{ attribution:'Esri, Maxar, Earthstar Geographics, and the GIS User Community', maxZoom:19 });
-basemapOSM.addTo(map);
 
 document.getElementById('basemap').addEventListener('change', (e)=>{
   const v=e.target.value;
-  if (v==='sat'){ map.removeLayer(basemapOSM); basemapSAT.addTo(map); }
-  else { map.removeLayer(basemapSAT); basemapOSM.addTo(map); }
+  if (v==='sat'){ if (map.hasLayer(basemapOSM)) map.removeLayer(basemapOSM); basemapSAT.addTo(map); }
+  else { if (map.hasLayer(basemapSAT)) map.removeLayer(basemapSAT); basemapOSM.addTo(map); }
 });
 
 let layers={}, allGeojson={}, roadGraph=null;
@@ -206,17 +208,14 @@ function refreshVisibility(){
   }
 }
 
-// Haversine
 function haversine(lat1,lon1,lat2,lon2){
   const toRad = d => d*Math.PI/180, R=6371.0088;
   const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
   const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
   return 2*R*Math.asin(Math.sqrt(a));
 }
-
-// Build a road graph carrying segment terrain
 function buildRoadGraph(gj){
-  const nodes=[], adj=[], segAttr=[]; // adj[i] = [{to, w, terrain}]
+  const nodes=[], adj=[];
   const keyIndex = new Map();
   function key(lon,lat){ return lon.toFixed(6)+','+lat.toFixed(6); }
   function addNode(lon,lat){
@@ -224,9 +223,7 @@ function buildRoadGraph(gj){
     if (keyIndex.has(k)) return keyIndex.get(k);
     const idx=nodes.length; nodes.push([lat,lon]); keyIndex.set(k,idx); adj[idx]=[]; return idx;
   }
-  function addEdge(a,b,w,terrain){
-    adj[a].push({to:b,w,terrain}); adj[b].push({to:a,w,terrain});
-  }
+  function addEdge(a,b,w,terrain){ adj[a].push({to:b,w,terrain}); adj[b].push({to:a,w,terrain}); }
   for (const f of (gj.features||[])){
     if (!f.geometry || f.geometry.type!=='LineString') continue;
     const terrain = (f.properties && f.properties.terrain) ? f.properties.terrain : 'flat';
@@ -240,7 +237,6 @@ function buildRoadGraph(gj){
   }
   return {nodes, adj};
 }
-
 function nearestNodeIdx(graph, lat, lon){
   let best=-1, bestD=1e12;
   for (let i=0;i<graph.nodes.length;i++){
@@ -250,7 +246,6 @@ function nearestNodeIdx(graph, lat, lon){
   }
   return best;
 }
-
 function dijkstra(graph, s, t){
   const N=graph.nodes.length;
   const dist=new Array(N).fill(Infinity);
@@ -274,47 +269,40 @@ function dijkstra(graph, s, t){
   path.reverse();
   return path;
 }
-
 function routeViaRoads(graph, A, B){
   if (!graph || !graph.nodes.length) return null;
   const idxA = graph.nodes.length; const idxB = graph.nodes.length+1;
   const nodes = graph.nodes.slice(); const adj = graph.adj.map(a=>a.slice());
   nodes.push([A.lat,A.lng]); adj[idxA]=[];
   nodes.push([B.lat,B.lng]); adj[idxB]=[];
-  // connect to nearest existing nodes
   const nA = nearestNodeIdx(graph, A.lat, A.lng);
   const nB = nearestNodeIdx(graph, B.lat, B.lng);
   function connect(u,v){
     const d=haversine(nodes[u][0],nodes[u][1],nodes[v][0],nodes[v][1]);
-    // inherit 'flat' for virtual connectors
     adj[u].push({to:v,w:d,terrain:'flat'}); adj[v].push({to:u,w:d,terrain:'flat'});
   }
   if (nA>=0) connect(idxA, nA);
   if (nB>=0) connect(idxB, nB);
   const p = dijkstra({nodes,adj}, idxA, idxB);
   if (!p) return null;
-  // Build coords + segment terrain
   const coords=[]; const segs=[];
   for (let i=1;i<p.length;i++){
     const u=p[i-1], v=p[i];
     const Axy = nodes[u], Bxy = nodes[v];
     coords.push([Axy[0],Axy[1]]);
-    // find the edge in adj[u] matching v to read terrain
     const e = adj[u].find(e=>e.to===v) || {terrain:'flat', w:haversine(Axy[0],Axy[1],Bxy[0],Bxy[1])};
     segs.push({from:[Axy[0],Axy[1]], to:[Bxy[0],Bxy[1]], km:e.w, terrain:e.terrain});
   }
   coords.push([nodes[p[p.length-1]][0], nodes[p[p.length-1]][1]]);
   return { coords, segs };
 }
-
 function routeStraight(A,B){
   return { coords: [[A.lat,A.lng],[B.lat,B.lng]], segs: [{from:[A.lat,A.lng], to:[B.lat,B.lng], km: haversine(A.lat,A.lng,B.lat,B.lng), terrain:'flat'}] };
 }
 
-// Place stops by TIME (hours), not distance
-function interpolate(A, B, t){
-  return [ A[0] + t*(B[0]-A[0]), A[1] + t*(B[1]-A[1]) ];
-}
+function interpolate(A, B, t){ return [ A[0] + t*(B[0]-A[0]), A[1] + t*(B[1]-A[1]) ]; }
+function totalHours(segs, kmhForTerrain){ let H=0; for (const s of segs){ H += s.km / kmhForTerrain(s.terrain); } return H; }
+
 function placeStopsByTime(segs, hoursPerDay, kmhForTerrain){
   let hoursAcc = 0.0;
   let nextStopAt = hoursPerDay;
@@ -327,107 +315,85 @@ function placeStopsByTime(segs, hoursPerDay, kmhForTerrain){
       const t = need / segHours;
       const pt = interpolate(s.from, s.to, t);
       stops.push(pt);
-      // advance target to next day stop
       nextStopAt += hoursPerDay;
     }
     hoursAcc += segHours;
   }
   return stops;
 }
-function placeMidBreaksByTime(segs, hoursPerDay, breaksPerDay, kmhForTerrain){
+
+function placeMidBreaksByTime(segs, baseHPD, breaksPerDay, kmhForTerrain){
   if (breaksPerDay<=0) return [];
-  const breaks=[];
-  let hoursAcc=0.0;
-  // targets at fractions of each day: hoursPerDay/(breaks+1), then +hoursPerDay each day
-  let k=1; 
-  let nextBreakAt = hoursPerDay * (1/(breaksPerDay+1));
-  while (True){
-    // Attempt to place until we exceed total route hours
-    // First compute total hours quickly
-    break;
+  const totalH = totalHours(segs, kmhForTerrain);
+  const dayCount = Math.ceil(totalH / baseHPD);
+  const targets = [];
+  for (let d=0; d<dayCount; d++){
+    for (let j=1; j<=breaksPerDay; j++){
+      targets.push(d*baseHPD + (j*(baseHPD/(breaksPerDay+1))));
+    }
   }
+  const pts = [];
+  let hAcc = 0.0;
+  let idx = 0;
+  for (const s of segs){
+    const v = kmhForTerrain(s.terrain);
+    const segH = s.km / v;
+    while (idx < targets.length && hAcc + segH >= targets[idx] - 1e-9){
+      const need = targets[idx] - hAcc;
+      const t = need / segH;
+      pts.push(interpolate(s.from, s.to, t));
+      idx++;
+    }
+    hAcc += segH;
+    if (idx>=targets.length) break;
+  }
+  return pts;
 }
 
-function totalHours(segs, kmhForTerrain){
-  let H=0; for (const s of segs){ H += s.km / kmhForTerrain(s.terrain); } return H;
-}
-
-// Globals for UI
-let roadGraph=null, layers={}, allGeojson={};
+let roadGraph=null, layersRouteSeg=null;
+let layers={}, allGeojson={};
 let picking='', A=null, B=null;
 let markerA=null, markerB=null, routeLayer=null, nightStopsLayer=null, breakStopsLayer=null;
 
+function styleForRouteSeg(terrain){ return (terrain==='mountain')? { color:'#a33', weight:4, dashArray:'6,4' } : { color:'#333', weight:3 }; }
+function drawRouteSegments(route){
+  if (layersRouteSeg){ map.removeLayer(layersRouteSeg); layersRouteSeg=null; }
+  layersRouteSeg = L.layerGroup();
+  for (const s of route.segs){
+    L.polyline([s.from, s.to], styleForRouteSeg(s.terrain)).addTo(layersRouteSeg);
+  }
+  layersRouteSeg.addTo(map);
+}
+
 function showRoute(route, mode, autoMountain){
   if (routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
-  routeLayer = L.polyline(route.coords, { color:'#333', weight:3 }).addTo(map);
+  routeLayer = L.polyline(route.coords, { color:'#000', weight:1, opacity:0 }).addTo(map); // invisible main polyline
   map.fitBounds(routeLayer.getBounds(), { padding:[30,30] });
 
-  // Speed resolver by terrain
   const season = document.getElementById('season').value;
   function kmhForTerrain(terrain){
-    // If trireme, ignore terrain
     if (mode==='trireme'){
       let v = SPEEDS.trireme.kmh;
       if (season==='winter') v*=0.85;
       return v;
     }
-    // Land modes
     const base = SPEEDS[mode];
-    if (autoMountain && terrain==='mountain'){
-      return SPEEDS.mountain_pass.kmh; // mountain pass speed
-    }
+    if (autoMountain && terrain==='mountain'){ return SPEEDS.mountain_pass.kmh; }
     return base.kmh;
-  }
-  function hoursPerDayForTerrain(terrain){
-    if (mode==='trireme') return SPEEDS.trireme.hoursPerDay;
-    if (autoMountain && terrain==='mountain') return SPEEDS.mountain_pass.hoursPerDay;
-    return SPEEDS[mode].hoursPerDay;
   }
   const kmTotal = route.segs.reduce((a,s)=>a+s.km,0);
   const roman = kmTotal / CONST.ROMAN_MILE_KM;
   const stadia = (kmTotal*1000) / CONST.GREEK_STADION_M;
 
-  const H = totalHours(route.segs, kmhForTerrain);
-  // We choose a representative hoursPerDay as: hoursPerDay of the dominant mode in each segment
-  // For placing nightly stops robustly, we will use piecewise time accumulation with the *current* segment hoursPerDay,
-  // but because hoursPerDay can vary by terrain, we place stops at absolute hours: e.g., at 6h, 12h, 18h, ... of cumulative moving time.
-  // We'll use base mode's hoursPerDay for the schedule grid, but if it's mountain terrain and auto is on, we'll switch to mountain day's length for that time window.
-  // For simplicity, define day length as hoursPerDay of the *current* segment when crossing a day boundary.
-  // Implementation: Use a constant day length = base mode's hoursPerDay; this is a reasonable MVP simplification.
   const baseHPD = (mode==='trireme') ? SPEEDS.trireme.hoursPerDay : SPEEDS[mode].hoursPerDay;
+  const H = totalHours(route.segs, kmhForTerrain);
   const nightStops = placeStopsByTime(route.segs, baseHPD, kmhForTerrain);
-
-  // Midday breaks positions: evenly split each day; we map them on absolute hour scale too.
   const breaksPerDay = (mode==='trireme') ? 0 : SPEEDS[mode].breaksPerDay;
-  const midBreaks = []; 
-  if (breaksPerDay>0){
-    // place at fractions within each day window
-    const totalH = H;
-    const dayCount = Math.ceil(totalH / baseHPD);
-    // We'll walk along segs and add markers at hours baseHPD*(d + j/(breaks+1))
-    const targets = [];
-    for (let d=0; d<dayCount; d++){
-      for (let j=1; j<=breaksPerDay; j++){
-        targets.push(d*baseHPD + (j*(baseHPD/(breaksPerDay+1))));
-      }
-    }
-    let hAcc=0.0; let tIdx=0;
-    for (const s of route.segs){
-      const v = kmhForTerrain(s.terrain);
-      const segH = s.km / v;
-      while (tIdx < targets.length and hAcc + segH >= targets[tIdx] - 1e-9){
-        const need = targets[tIdx] - hAcc;
-        const tt = need / segH;
-        const pt = interpolate(s.from, s.to, tt);
-        midBreaks.push(pt);
-        tIdx += 1;
-      }
-      hAcc += segH;
-      if (tIdx>=targets.length) break;
-    }
-  }
+  const midBreaks = placeMidBreaksByTime(route.segs, baseHPD, breaksPerDay, kmhForTerrain);
 
-  // Draw stops
+  // Draw colored segment overlays
+  drawRouteSegments(route);
+
   if (nightStopsLayer){ map.removeLayer(nightStopsLayer); nightStopsLayer=null; }
   nightStopsLayer = L.layerGroup();
   nightStops.forEach((p,i)=>{
@@ -456,19 +422,21 @@ function showRoute(route, mode, autoMountain){
   `;
 }
 
-function styleForRouteSeg(terrain){
-  if (terrain==='mountain') return { color:'#a33', weight:4, dashArray:'6,4' };
-  return { color:'#333', weight:3 };
+function setPicking(which){
+  picking=which;
+  map.getContainer().style.cursor='crosshair';
+  alert(t('tip_pick') + ': ' + (which==='A'? t('a_marker') : t('b_marker')));
 }
-
-let layersRouteSeg=null;
-function drawRouteSegments(route){
+function clearAll(){
+  picking='';
+  if (markerA){ map.removeLayer(markerA); markerA=null; }
+  if (markerB){ map.removeLayer(markerB); markerB=null; }
+  if (routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
+  if (nightStopsLayer){ map.removeLayer(nightStopsLayer); nightStopsLayer=null; }
+  if (breakStopsLayer){ map.removeLayer(breakStopsLayer); breakStopsLayer=null; }
   if (layersRouteSeg){ map.removeLayer(layersRouteSeg); layersRouteSeg=null; }
-  layersRouteSeg = L.layerGroup();
-  for (const s of route.segs){
-    L.polyline([s.from, s.to], styleForRouteSeg(s.terrain)).addTo(layersRouteSeg);
-  }
-  layersRouteSeg.addTo(map);
+  A=B=null; document.getElementById('summary').innerHTML='';
+  map.getContainer().style.cursor='';
 }
 
 function setupUI(){
@@ -494,8 +462,6 @@ function setupUI(){
     } else {
       route = routeStraight(A,B);
     }
-    // Visualize per-terrain segments
-    drawRouteSegments(route);
     showRoute(route, mode, autoMountain);
   });
 
@@ -515,32 +481,19 @@ function setupUI(){
   });
 }
 
-function setPicking(which){
-  picking=which;
-  map.getContainer().style.cursor='crosshair';
-  alert(t('tip_pick') + ': ' + (which==='A'? t('a_marker') : t('b_marker')));
-}
-
-function clearAll(){
-  picking='';
-  if (markerA){ map.removeLayer(markerA); markerA=null; }
-  if (markerB){ map.removeLayer(markerB); markerB=null; }
-  if (routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
-  if (nightStopsLayer){ map.removeLayer(nightStopsLayer); nightStopsLayer=null; }
-  if (breakStopsLayer){ map.removeLayer(breakStopsLayer); breakStopsLayer=null; }
-  if (layersRouteSeg){ map.removeLayer(layersRouteSeg); layersRouteSeg=null; }
-  A=B=null; document.getElementById('summary').innerHTML='';
-  map.getContainer().style.cursor='';
-}
-
 (async function init(){
-  i18n.es = await loadJSON('i18n/es.json');
-  i18n.en = await loadJSON('i18n/en.json');
-  updateTexts();
-  await loadLayers();
-  refreshVisibility();
-  roadGraph = buildRoadGraph(allGeojson.roads);
-  setupUI();
+  try{
+    i18n.es = await loadJSON('i18n/es.json');
+    i18n.en = await loadJSON('i18n/en.json');
+    updateTexts();
+    await loadLayers();
+    refreshVisibility();
+    roadGraph = buildRoadGraph(allGeojson.roads);
+    setupUI();
+  }catch(err){
+    alert('Error cargando la app: ' + err);
+    console.error(err);
+  }
 })();
 </script>
 </body>
