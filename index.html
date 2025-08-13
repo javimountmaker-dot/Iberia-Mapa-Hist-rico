@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Mapa histórico — Siglo III a.C.</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, sans-serif; }
+    .topbar { position: absolute; top: 8px; left: 8px; right: 8px; z-index: 1000; background: rgba(255,255,245,0.9); padding: 8px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; align-items: center; }
+    .panel { position: absolute; bottom: 10px; left: 10px; z-index: 1000; background: rgba(255,255,245,0.9); padding: 8px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); max-width: 360px; }
+    .legend { font-size: 12px; }
+    .control { display: flex; gap: 8px; align-items: center; }
+    input[type=range] { width: 100%; }
+    .btn { padding: 6px 10px; border: 1px solid #ddd; background: #fff; border-radius: 8px; cursor: pointer; }
+    .btn:active { transform: translateY(1px); }
+    .badge { display:inline-block; padding: 2px 6px; border-radius: 6px; font-size: 11px; border: 1px solid #999; margin-right: 4px; }
+    .blue { color: #0a4; }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+<div class="topbar">
+  <div><strong id="title"></strong></div>
+  <div class="control">
+    <label id="lbl-year"></label>
+    <input id="year" type="range" min="201" max="300" value="218" step="1" />
+    <span id="year-display"></span> <span id="era-display"></span>
+  </div>
+  <div class="control">
+    <label id="lbl-lang"></label>
+    <select id="lang">
+      <option value="es">ES</option>
+      <option value="en">EN</option>
+    </select>
+  </div>
+  <div class="control">
+    <label id="lbl-season"></label>
+    <select id="season">
+      <option value="summer">summer</option>
+      <option value="winter">winter</option>
+    </select>
+  </div>
+</div>
+
+<div class="panel legend">
+  <div><strong id="legend-title"></strong></div>
+  <div><span class="badge" style="background:#cde;border-color:#99c">■</span> <span id="legend-rivers"></span></div>
+  <div><span class="badge" style="background:#eee;border-color:#bbb">—</span> <span id="legend-roads"></span></div>
+  <div><span class="badge" style="background:#fde;border-color:#d9a">□</span> <span id="legend-polities"></span></div>
+  <div><span class="badge" style="background:#eef;border-color:#aac">≈</span> <span id="legend-coasts"></span></div>
+  <div><span class="badge" style="background:#ffe;border-color:#cc9">·</span> <span id="legend-settlements"></span></div>
+  <div><span class="badge" style="background:#efe;border-color:#9c9">⇢</span> <span id="legend-maritime"></span></div>
+  <hr/>
+  <div><strong id="legend-uncert"></strong>: 
+    <span class="badge">✓</span><span id="legend-valid"></span> · 
+    <span class="badge">?</span><span id="legend-hyp"></span> · 
+    <span class="badge">≈</span><span id="legend-model"></span>
+  </div>
+  <hr/>
+  <div><strong id="legend-measure"></strong>:
+    <button id="btn-measure" class="btn">⟷</button>
+    <button id="btn-clear" class="btn">✕</button>
+    <div id="measure-output"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const CONST = { ROMAN_MILE_KM: 1.48, GREEK_STADION_M: 185 };
+let i18n = {};
+let lang = 'es';
+
+async function loadJSON(url){ const r = await fetch(url); return r.json(); }
+
+function t(key){ return (i18n[lang] && i18n[lang][key]) || key; }
+
+function updateTexts(){
+  document.getElementById('title').innerText = t('app_title');
+  document.getElementById('lbl-year').innerText = t('year')+':';
+  document.getElementById('era-display').innerText = t('era_bc');
+  document.getElementById('lbl-lang').innerText = t('language')+':';
+  document.getElementById('lbl-season').innerText = t('season')+':';
+  document.getElementById('legend-title').innerText = t('legend');
+  document.getElementById('legend-rivers').innerText = t('rivers');
+  document.getElementById('legend-roads').innerText = t('roads');
+  document.getElementById('legend-polities').innerText = t('polities');
+  document.getElementById('legend-coasts').innerText = t('coasts');
+  document.getElementById('legend-settlements').innerText = t('settlements');
+  document.getElementById('legend-maritime').innerText = t('maritime_routes');
+  document.getElementById('legend-uncert').innerText = t('uncertainty');
+  document.getElementById('legend-valid').innerText = t('validated');
+  document.getElementById('legend-hyp').innerText = t('hypothesis');
+  document.getElementById('legend-model').innerText = t('model');
+  document.getElementById('legend-measure').innerText = t('measure');
+}
+
+function bcYear(){ return parseInt(document.getElementById('year').value,10); }
+
+function isActiveByTemporal(props, y){
+  // y is BC; props have start_year, start_era, end_year, end_era
+  const sy = props.start_year || 300;
+  const se = props.start_era || 'BC';
+  const ey = props.end_year || 201;
+  const ee = props.end_era || 'BC';
+  // Interpret only BC slider: if an era is AC, treat as 0 (beyond slider domain)
+  const startBC = (se === 'BC') ? sy : 0; // AC considered after BC period
+  const endBC = (ee === 'BC') ? ey : 0;
+  // Active if y between [endBC, startBC]
+  return (y <= startBC) && (y >= endBC);
+}
+
+function styleFor(feature){
+  const kind = feature.geometry.type;
+  const props = feature.properties || {};
+  if (props.type === 'rio') {
+    return { color:'#1f78b4', weight:3, opacity:0.9 };
+  }
+  if (props.type === 'costa') {
+    return { color:'#3957a6', weight:2, opacity:0.5, dashArray:'4,6' };
+  }
+  if (props.type === 'calzada') {
+    return { color:'#6b4e16', weight:2.5 };
+  }
+  if (props.type === 'camino') {
+    return { color:'#8a6d3b', weight:2, dashArray:'6,6' };
+  }
+  if (feature.geometry.type === 'Polygon') {
+    // basic fill by color_token
+    const tok = props.color_token || 'default';
+    const colors = { iberian:'#e7c0a8', default:'#d9d2c6' };
+    return { color:'#634b36', weight:1, fillColor:colors[tok]||colors.default, fillOpacity:0.3 };
+  }
+  // points
+  return { radius:5, color:'#333', fillColor:'#ffe08a', fillOpacity:0.9 };
+}
+
+function pointToLayer(feature, latlng){
+  const opts = styleFor(feature);
+  return L.circleMarker(latlng, opts);
+}
+
+function onEachFeature(feature, layer){
+  const p = feature.properties || {};
+  const tip = [
+    `<strong>${p.name || p.id || '—'}</strong>`,
+    p.alt_names ? `<div>${p.alt_names}</div>` : '',
+    `<div>${p.culture ? p.culture : (p.type||'')}</div>`,
+    `<div>${(p.start_year||'?')} ${(p.start_era||'BC')} → ${(p.end_year||'?')} ${(p.end_era||'BC')}</div>`,
+    p.source ? `<div><em>src:</em> ${p.source}</div>` : '',
+    p.certainty ? `<div><em>${t('uncertainty')}:</em> ${p.certainty}</div>` : ''
+  ].join('');
+  layer.bindTooltip(tip);
+}
+
+let map = L.map('map').setView([40.0, -3.5], 6);
+
+// Optional neutral background (OpenStreetMap). For historical aesthetic, you may remove it.
+const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+let layers = {};
+let allGeojson = {};
+
+async function loadLayers(){
+  const files = {
+    settlements: 'data/toponimos.geojson',
+    roads: 'data/vias.geojson',
+    rivers: 'data/rios.geojson',
+    coasts: 'data/costas.geojson',
+    polities: 'data/politico.geojson',
+    ports: 'data/puertos.geojson',
+    maritime_routes: 'data/rutas_maritimas.geojson',
+    uncertainty: 'data/incertidumbre.geojson'
+  };
+  for (const [key, url] of Object.entries(files)){
+    const gj = await loadJSON(url);
+    allGeojson[key] = gj;
+    const layer = L.geoJSON(gj, { style: styleFor, pointToLayer, onEachFeature });
+    layers[key] = layer;
+  }
+  // Add defaults
+  layers.rivers.addTo(map);
+  layers.roads.addTo(map);
+  layers.settlements.addTo(map);
+  layers.polities.addTo(map);
+}
+
+function refreshVisibility(){
+  const y = bcYear();
+  for (const [key, layer] of Object.entries(layers)){
+    layer.clearLayers();
+    const gj = allGeojson[key];
+    const filtered = { type:'FeatureCollection', features: gj.features.filter(f => isActiveByTemporal(f.properties||{}, y)) };
+    layer.addData(filtered);
+  }
+}
+
+function setupUI(){
+  const year = document.getElementById('year');
+  const yd = document.getElementById('year-display');
+  yd.innerText = year.value;
+  year.addEventListener('input', () => { yd.innerText = year.value; refreshVisibility(); });
+
+  const langSel = document.getElementById('lang');
+  langSel.addEventListener('change', () => { lang = langSel.value; updateTexts(); });
+
+  document.getElementById('btn-measure').addEventListener('click', startMeasure);
+  document.getElementById('btn-clear').addEventListener('click', clearMeasure);
+}
+
+let measure = { active:false, pts:[], layer:null };
+function haversine(lat1, lon1, lat2, lon2){
+  const toRad = d => d * Math.PI / 180;
+  const R = 6371.0088; // Earth mean radius (km)
+  const dLat = toRad(lat2-lat1);
+  const dLon = toRad(lon2-lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+function startMeasure(){
+  measure.active = !measure.active;
+  if (measure.active){
+    map.getContainer().style.cursor = 'crosshair';
+    map.on('click', onMeasureClick);
+  } else {
+    map.getContainer().style.cursor = '';
+    map.off('click', onMeasureClick);
+  }
+}
+function onMeasureClick(e){
+  measure.pts.push([e.latlng.lat, e.latlng.lng]);
+  if (measure.layer){ map.removeLayer(measure.layer); }
+  measure.layer = L.polyline(measure.pts, { color:'#333', weight:2, dashArray:'4,4' }).addTo(map);
+  updateMeasureOutput();
+}
+function clearMeasure(){
+  measure.pts = [];
+  if (measure.layer){ map.removeLayer(measure.layer); measure.layer = null; }
+  updateMeasureOutput();
+}
+function updateMeasureOutput(){
+  const out = document.getElementById('measure-output');
+  if (measure.pts.length < 2){ out.innerText = ''; return; }
+  let distKm = 0;
+  for (let i=1; i<measure.pts.length; i++){
+    const [aLat, aLon] = measure.pts[i-1];
+    const [bLat, bLon] = measure.pts[i];
+    distKm += haversine(aLat, aLon, bLat, bLon);
+  }
+  const romanMiles = distKm / CONST.ROMAN_MILE_KM;
+  const stadia = (distKm * 1000) / CONST.GREEK_STADION_M;
+  out.innerText = `${t('distance')}: ${distKm.toFixed(2)} ${t('km')} · ${romanMiles.toFixed(2)} ${t('roman_miles')} · ${stadia.toFixed(0)} ${t('greek_stadia')}`;
+}
+
+(async function init(){
+  // load i18n
+  i18n.es = await loadJSON('i18n/es.json');
+  i18n.en = await loadJSON('i18n/en.json');
+  updateTexts();
+  setupUI();
+  await loadLayers();
+  refreshVisibility();
+})();
+</script>
+</body>
+</html>
