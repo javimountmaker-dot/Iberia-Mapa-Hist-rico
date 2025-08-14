@@ -6,53 +6,50 @@
   <title>Mapa histórico — Rutas MVP</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    html, body { height:100%; margin:0; }
-    body { display:flex; }
-    #sidebar { width: 340px; max-width: 90vw; background:#fffef6; border-right:1px solid #ddd; padding:12px; box-sizing:border-box; overflow:auto; }
-    #map { flex:1; }
-    h1 { font-size:16px; margin:0 0 8px; }
-    .group { margin-bottom:12px; }
-    label { display:block; font-size:12px; color:#333; margin-bottom:4px; }
-    input[type=range] { width:100%; }
-    select, input[type=text], button { width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; box-sizing:border-box; margin-bottom:6px; background:#fff; }
-    .row { display:flex; gap:6px; }
-    .row > * { flex:1; }
-    .badge { display:inline-block; padding:2px 6px; border:1px solid #aaa; border-radius:999px; font-size:12px; background:#fff; margin-right:6px; }
-    .small { font-size:12px; color:#555; }
-    .coords { font-size:12px; color:#222; background:#faf7e6; border:1px solid #ddd; border-radius:6px; padding:4px 6px; }
+    html, body, #map { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, sans-serif; }
+    #map { position: absolute; top: 0; left: 280px; right: 0; bottom: 0; }
+    .sidebar { position:absolute; top:0; left:0; bottom:0; width:280px; background:#fffef6; border-right:1px solid #ddd; z-index:999; display:flex; flex-direction:column; }
+    .side-head { padding:10px; border-bottom:1px solid #eee; }
+    .side-body { padding:10px; overflow:auto; gap:10px; display:flex; flex-direction:column; }
+    .group label { display:block; font-size:12px; color:#444; margin-bottom:4px; }
+    input[type=range] { width: 100%; }
+    input[type=text], select { width:100%; padding:8px; border-radius:8px; border:1px solid #ccc; }
+    button { padding:8px 10px; border-radius:8px; border:1px solid #ccc; background:#fff; cursor:pointer; }
+    button:active { transform: translateY(1px); }
+    .status { font-size:12px; color:#333; padding:6px 8px; background:#f5f2e8; border:1px solid #e6e1d3; border-radius:8px; }
+    .legend small { color:#666; }
+    .coord { font-size:12px; color:#333; }
+    .row { display:flex; gap:6px; align-items:center; }
+    .chip { display:inline-block; padding:2px 6px; border:1px solid #aaa; border-radius:999px; font-size:12px; background:#fff; }
+    .result { font-size:13px; padding:8px; background:#fff; border:1px solid #ddd; border-radius:8px; }
+    .suggestions { position:relative; }
+    .suggestions ul { position:absolute; left:0; right:0; top:100%; z-index:1000; background:#fff; border:1px solid #ddd; border-radius:8px; margin:2px 0 0; padding:6px; list-style:none; max-height:180px; overflow:auto; }
+    .suggestions li { padding:4px 6px; cursor:pointer; }
+    .suggestions li:hover { background:#f0f0f0; }
   </style>
 </head>
 <body>
-  <div id="sidebar">
-    <h1 id="title">Mapa histórico — Planificador de rutas (MVP)</h1>
-
+<div class="sidebar">
+  <div class="side-head"><strong id="title"></strong></div>
+  <div class="side-body">
     <div class="group">
-      <label id="lbl-year">Año</label>
-      <input id="year" type="range" min="201" max="300" value="218" step="1" />
-      <div class="row">
-        <div><span id="year-display" class="badge">218</span> <span id="era-display" class="badge">a.C.</span></div>
-        <div class="row" style="gap:6px; align-items:center;">
-          <select id="lang"><option value="es" selected>ES</option><option value="en">EN</option></select>
-          <select id="season"><option value="summer">summer</option><option value="winter">winter</option></select>
-          <select id="basemap"><option value="osm">osm</option><option value="sat">sat</option></select>
-        </div>
-      </div>
+      <label id="lbl-year"></label>
+      <div class="row"><input id="year" type="range" min="201" max="300" value="218" step="1"/><span style="width:40px;text-align:right" id="year-display">218</span> <span id="era-display"></span></div>
     </div>
-
     <div class="group">
-      <label id="legend-title">Leyenda</label>
-      <div class="small">
-        <span class="badge">■</span> <span id="legend-rivers">Ríos</span> ·
-        <span class="badge">—</span> <span id="legend-roads">Red viaria</span> ·
-        <span class="badge">≈</span> <span id="legend-coasts">Costas</span> ·
-        <span class="badge">□</span> <span id="legend-polities">Polidades</span> ·
-        <span class="badge">·</span> <span id="legend-settlements">Topónimos</span> ·
-        <span class="badge">⇢</span> <span id="legend-maritime">Rutas marítimas</span>
-      </div>
+      <label id="lbl-lang"></label>
+      <select id="lang"><option value="es" selected>ES</option><option value="en">EN</option></select>
     </div>
-
     <div class="group">
-      <label id="lbl-modes">Modo</label>
+      <label id="lbl-season"></label>
+      <select id="season"><option value="summer">summer</option><option value="winter">winter</option></select>
+    </div>
+    <div class="group">
+      <label id="lbl-basemap"></label>
+      <select id="basemap"><option value="osm" selected>osm</option><option value="sat">sat</option></select>
+    </div>
+    <div class="group">
+      <label id="lbl-modes"></label>
       <select id="mode">
         <option value="foot_baggage">foot_baggage</option>
         <option value="foot_double">foot_double</option>
@@ -61,302 +58,397 @@
         <option value="trireme">trireme</option>
       </select>
       <div class="row">
-        <label class="small"><input type="checkbox" id="chk-roads" checked/> <span id="lbl-follow">Seguir red viaria</span></label>
-        <label class="small"><input type="checkbox" id="chk-auto" checked/> <span id="lbl-auto">Auto montaña</span></label>
+        <label class="chip"><input type="checkbox" id="chk-auto" checked/> <span id="lbl-auto"></span></label>
       </div>
     </div>
-
     <div class="group">
-      <label id="origin-label">Origen</label>
-      <input id="origin" type="text" placeholder="Tarraco, Gades…" list="places" />
-      <div class="row">
-        <button id="btnSetA">Set A</button>
-        <div id="coordsA" class="coords">A: —</div>
-      </div>
+      <label id="lbl-origin"></label>
+      <div class="suggestions"><input id="origin" type="text" placeholder="" autocomplete="off"/><ul id="sugO" style="display:none"></ul></div>
+      <div class="row"><button id="btnSetA"></button> <span class="coord" id="coordA"></span></div>
     </div>
-
     <div class="group">
-      <label id="destination-label">Destino</label>
-      <input id="destination" type="text" placeholder="Tarraco, Gades…" list="places" />
-      <div class="row">
-        <button id="btnSetB">Set B</button>
-        <div id="coordsB" class="coords">B: —</div>
-      </div>
+      <label id="lbl-dest"></label>
+      <div class="suggestions"><input id="dest" type="text" placeholder="" autocomplete="off"/><ul id="sugD" style="display:none"></ul></div>
+      <div class="row"><button id="btnSetB"></button> <span class="coord" id="coordB"></span></div>
     </div>
-
-    <datalist id="places"></datalist>
-
-    <div class="group">
-      <div class="row">
-        <button id="btnA">Marcar A</button>
-        <button id="btnB">Marcar B</button>
-      </div>
-      <div class="row">
-        <button id="btnCalc">Calcular</button>
-        <button id="btnClear">Limpiar</button>
-      </div>
-      <div id="status" class="small">Listo</div>
+    <div class="row">
+      <button id="btnCalc"></button>
+      <button id="btnClear"></button>
     </div>
+    <div class="status" id="status"></div>
+    <div class="result" id="summary"></div>
 
-    <div class="group">
-      <div id="summary" class="small"></div>
+    <div class="legend">
+      <div><strong id="legend-title"></strong></div>
+      <div><span class="chip">■</span> <span id="legend-rivers"></span></div>
+      <div><span class="chip">—</span> <span id="legend-roads"></span></div>
+      <div><span class="chip">≈</span> <span id="legend-coasts"></span></div>
+      <div><span class="chip">·</span> <span id="legend-settlements"></span></div>
+      <div><span class="chip">□</span> <span id="legend-polities"></span></div>
+      <div><span class="chip">⇢</span> <span id="legend-maritime"></span></div>
     </div>
   </div>
+</div>
 
-  <div id="map"></div>
+<div id="map"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const VERSION = '?v=1755130378';
+const VERSION = '1755131517';
 const CONST = { ROMAN_MILE_KM: 1.48, GREEK_STADION_M: 185 };
+let i18n={}; let lang='es';
 
-// Speeds
-const SPEEDS = { foot_baggage:{kmh:23.68/6,hoursPerDay:6,breaksPerDay:0}, foot_double:{kmh:47.36/12,hoursPerDay:12,breaksPerDay:1}, foot_forced:{kmh:60/10,hoursPerDay:10,breaksPerDay:1}, mountain_pass:{kmh:14.8/5,hoursPerDay:5,breaksPerDay:0}, trireme:{kmh:9.26,hoursPerDay:12,breaksPerDay:0} };
-let i18n = {es:{}, en:{}}; let lang='es';
+// Speeds per earlier spec
+const SPEEDS = {
+  foot_baggage:  { kmh: 23.68/6, hoursPerDay: 6,  breaksPerDay: 0 },
+  foot_double:   { kmh: 47.36/12, hoursPerDay: 12, breaksPerDay: 1 },
+  foot_forced:   { kmh: 60/10,    hoursPerDay: 10, breaksPerDay: 1 },
+  mountain_pass: { kmh: 14.8/5,   hoursPerDay: 5,  breaksPerDay: 0 },
+  trireme:       { kmh: 9.26,     hoursPerDay: 12, breaksPerDay: 0 }
+};
 
-function eraNorm(s){ if(!s) return 'BC'; s=s.toString().toLowerCase(); if(s.includes('bc')||s.includes('a.c')) return 'BC'; if(s.includes('ad')||s.includes('ac')||s.includes('d.c')) return 'AD'; return s.toUpperCase(); }
-function toAbsYear(y, era){ era=eraNorm(era); return (era==='BC')? -Math.abs(parseInt(y||0,10)) : Math.abs(parseInt(y||0,10)); }
-function featureActive(props, sliderBC){
-  const y = -Math.abs(parseInt(sliderBC,10)); // slider 201–300 BC -> -201..-300
-  const sy = toAbsYear(props.start_year, props.start_era);
-  const ey = toAbsYear(props.end_year, props.end_era);
-  const a = Math.min(sy, ey), b = Math.max(sy, ey);
-  return (y >= a && y <= b);
-}
-
-async function loadJSON(u){ const r=await fetch(u+VERSION); if(!r.ok) throw new Error(u+': '+r.status); return r.json(); }
+async function loadJSON(u){ const r=await fetch(u+`?v=${VERSION}`); return r.json(); }
 function t(k){ return (i18n[lang] && i18n[lang][k]) || k; }
 function updateTexts(){
   document.getElementById('title').innerText = t('app_title');
-  document.getElementById('lbl-year').innerText = t('year');
-  document.getElementById('era-display').innerText = lang==='es'? t('era_bc') : t('era_bc');
+  document.getElementById('lbl-year').innerText = t('year')+':';
+  document.getElementById('era-display').innerText = t('era_bc');
+  document.getElementById('lbl-lang').innerText = t('language')+':';
+  document.getElementById('lbl-season').innerText = t('season')+':';
+  document.getElementById('lbl-basemap').innerText = t('basemap')+':';
+  document.getElementById('basemap').querySelector('option[value="osm"]').textContent = t('osm');
+  document.getElementById('basemap').querySelector('option[value="sat"]').textContent = t('sat');
   document.getElementById('legend-title').innerText = t('legend');
   document.getElementById('legend-rivers').innerText = t('rivers');
   document.getElementById('legend-roads').innerText = t('roads');
-  document.getElementById('legend-coasts').innerText = t('coasts');
   document.getElementById('legend-polities').innerText = t('polities');
+  document.getElementById('legend-coasts').innerText = t('coasts');
   document.getElementById('legend-settlements').innerText = t('settlements');
   document.getElementById('legend-maritime').innerText = t('maritime_routes');
-  document.getElementById('lbl-modes').innerText = t('modes');
-  const mSel=document.getElementById('mode');
-  mSel.querySelector('option[value="foot_baggage"]').textContent=t('foot_baggage');
-  mSel.querySelector('option[value="foot_double"]').textContent=t('foot_double');
-  mSel.querySelector('option[value="foot_forced"]').textContent=t('foot_forced');
-  mSel.querySelector('option[value="mountain_pass"]').textContent=t('mountain_pass');
-  mSel.querySelector('option[value="trireme"]').textContent=t('trireme');
-  document.getElementById('lbl-follow').innerText = t('follow_roads');
+  document.getElementById('lbl-modes').innerText = t('modes')+':';
+  document.getElementById('lbl-origin').innerText = t('origin');
+  document.getElementById('lbl-dest').innerText = t('destination');
+  document.getElementById('origin').placeholder = t('enter_place');
+  document.getElementById('dest').placeholder = t('enter_place');
+  document.getElementById('btnSetA').textContent = t('set_A');
+  document.getElementById('btnSetB').textContent = t('set_B');
+  document.getElementById('btnCalc').textContent = t('calculate');
+  document.getElementById('btnClear').textContent = t('clear');
   document.getElementById('lbl-auto').innerText = t('auto_mountain');
-  document.getElementById('origin-label').innerText=t('origin');
-  document.getElementById('destination-label').innerText=t('destination');
-  document.getElementById('btnSetA').innerText=t('set_A');
-  document.getElementById('btnSetB').innerText=t('set_B');
-  document.getElementById('btnA').innerText=t('pick_A');
-  document.getElementById('btnB').innerText=t('pick_B');
-  document.getElementById('btnCalc').innerText=t('calculate');
-  document.getElementById('btnClear').innerText=t('clear');
-  document.getElementById('status').innerText=t('status_ready');
-  document.getElementById('basemap').querySelector('option[value="osm"]').textContent = t('osm');
-  document.getElementById('basemap').querySelector('option[value="sat"]').textContent = t('sat');
 }
 
-function haversine(lat1,lon1,lat2,lon2){ const toRad = d => d*Math.PI/180, R=6371.0088; const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1); const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2; return 2*R*Math.asin(Math.sqrt(a)); }
+function normEra(e){
+  if(!e) return 'BC';
+  e = (''+e).toLowerCase();
+  if (e.includes('bc') || e.includes('a.c')) return 'BC';
+  if (e.includes('ac') || e.includes('ad') || e.includes('d.c')) return 'AC';
+  return 'BC';
+}
 
-// Map & basemaps
-let map = L.map('map', { minZoom:5, maxZoom:19 }).setView([40,-3.5],6);
-let baseOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'&copy; OpenStreetMap contributors', maxZoom:19 });
-let baseSAT = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{x}/{y}',{ attribution:'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics', maxZoom:19, crossOrigin:true });
-baseOSM.addTo(map);
+function isActiveByTemporal(p, yBC){
+  const sy = Number(p.start_year ?? 300);
+  const se = normEra(p.start_era ?? 'BC');
+  const ey = Number(p.end_year ?? 201);
+  const ee = normEra(p.end_era ?? 'BC');
+  const startBC = (se==='BC') ? sy : 0;
+  const endBC   = (ee==='BC') ? ey : 0;
+  return (yBC <= startBC) && (yBC >= endBC);
+}
 
-document.getElementById('basemap').addEventListener('change', (e)=>{
-  const v = e.target.value;
-  if (v==='sat'){ if (map.hasLayer(baseOSM)) map.removeLayer(baseOSM); if (!map.hasLayer(baseSAT)) baseSAT.addTo(map); }
-  else { if (map.hasLayer(baseSAT)) map.removeLayer(baseSAT); if (!map.hasLayer(baseOSM)) baseOSM.addTo(map); }
-});
-
-let layers={}, allGeo={};
-
-function styleFor(f){
-  const p=f.properties||{};
+function styleFor(feature){
+  const p = feature.properties||{};
   if (p.type==='rio') return { color:'#1f78b4', weight:3, opacity:0.9 };
   if (p.type==='costa') return { color:'#3957a6', weight:2, opacity:0.5, dashArray:'4,6' };
   if (p.type==='calzada') return { color:'#6b4e16', weight:2.5 };
   if (p.type==='camino') return { color:'#8a6d3b', weight:2, dashArray:'6,6' };
-  if (f.geometry.type==='Polygon') return { color:'#634b36', weight:1, fillColor:'#e7c0a8', fillOpacity:0.3 };
+  if (feature.geometry.type==='Polygon'){
+    const tok=p.color_token||'default'; const colors={iberian:'#e7c0a8',default:'#d9d2c6'};
+    return { color:'#634b36', weight:1, fillColor:colors[tok]||colors.default, fillOpacity:0.3 };
+  }
   return { radius:5, color:'#333', fillColor:'#ffe08a', fillOpacity:0.9 };
 }
 function pointToLayer(f,ll){ return L.circleMarker(ll, styleFor(f)); }
 function onEachFeature(f,layer){
   const p=f.properties||{};
-  const tip = `<strong>${p.name||p.id||'—'}</strong><div>${p.alt_names||''}</div>
-  <div>${p.culture? p.culture : (p.type||'')}</div>
-  <div>${(p.start_year||'?')} ${(p.start_era||'BC')} → ${(p.end_year||'?')} ${(p.end_era||'BC')}</div>`;
+  const tip = `<strong>${p.name||p.id||'—'}</strong>`;
   layer.bindTooltip(tip);
 }
 
-async function loadJSON(u){ const r=await fetch(u+VERSION); if(!r.ok) throw new Error(u+': '+r.status); return r.json(); }
+let map = L.map('map', { minZoom:5, maxZoom:12, zoomControl:true }).setView([40,-3.5],6);
+let baseLayer=null;
+const basemapOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'&copy; OpenStreetMap', maxZoom:19 });
+const basemapSAT = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{ attribution:'Esri, Maxar', maxZoom:19, noWrap:false });
 
+function setBasemap(which){
+  if (baseLayer) map.removeLayer(baseLayer);
+  baseLayer = (which==='sat') ? basemapSAT : basemapOSM;
+  baseLayer.addTo(map);
+}
+setBasemap('osm');
+
+let layers={}, allGeojson={};
 async function loadLayers(){
-  const files = { settlements:'data/toponimos.geojson', roads:'data/vias.geojson', rivers:'data/rios.geojson', coasts:'data/costas.geojson', polities:'data/politico.geojson', ports:'data/puertos.geojson', maritime_routes:'data/rutas_maritimas.geojson', uncertainty:'data/incertidumbre.geojson' };
-  for (const [k,u] of Object.entries(files)){ const gj = await loadJSON(u); allGeo[k]=gj; layers[k] = L.geoJSON(gj,{style:styleFor, pointToLayer, onEachFeature}); }
-  layers.rivers.addTo(map); layers.roads.addTo(map); layers.settlements.addTo(map); layers.polities.addTo(map);
-  rebuildPlaceIndex();
-  refreshVisibility();
+  const files = {
+    settlements:'data/toponimos.geojson',
+    roads:'data/vias.geojson',
+    rivers:'data/rios.geojson',
+    coasts:'data/costas.geojson',
+    polities:'data/politico.geojson',
+    ports:'data/puertos.geojson',
+    maritime_routes:'data/rutas_maritimas.geojson',
+    uncertainty:'data/incertidumbre.geojson'
+  };
+  for (const [k,u] of Object.entries(files)){
+    const gj = await loadJSON(u);
+    allGeojson[k]=gj;
+    const layer = L.geoJSON(gj,{style:styleFor,pointToLayer,onEachFeature});
+    layers[k]=layer;
+  }
+  layers.rivers.addTo(map);
+  layers.roads.addTo(map);
+  layers.settlements.addTo(map);
+  layers.polities.addTo(map);
 }
 
+function bcYear(){ return parseInt(document.getElementById('year').value,10); }
 function refreshVisibility(){
-  const bc = parseInt(document.getElementById('year').value,10);
+  const y = bcYear();
   for (const [k,layer] of Object.entries(layers)){
-    layer.clearLayers();
-    const gj = allGeo[k];
-    const filtered = { type:'FeatureCollection', features:(gj.features||[]).filter(f => featureActive(f.properties||{}, bc)) };
-    layer.addData(filtered);
+    const gj = allGeojson[k];
+    const filtered = { type:'FeatureCollection', features: (gj.features||[]).filter(f => isActiveByTemporal(f.properties||{}, y)) };
+    layer.clearLayers(); layer.addData(filtered);
   }
 }
 
-document.getElementById('year').addEventListener('input', ()=>{ document.getElementById('year-display').innerText = document.getElementById('year').value; refreshVisibility(); });
-document.getElementById('lang').addEventListener('change', (e)=>{ lang=e.target.value; updateTexts(); });
-
-// --- Places search (from settlements + ports) ---
-let placeIndex = [];
-function rebuildPlaceIndex(){
-  placeIndex = [];
-  function addFrom(gj){
-    (gj.features||[]).forEach(f=>{
-      if (!f.geometry) return;
-      const g=f.geometry;
-      if (g.type!=='Point') return;
-      const c=g.coordinates;
-      const name=(f.properties && (f.properties.name || f.properties.id)) || '—';
-      placeIndex.push({ name, lat:c[1], lon:c[0] });
-    });
-  }
-  addFrom(allGeo.settlements);
-  addFrom(allGeo.ports);
-  const dl = document.getElementById('places');
-  dl.innerHTML = placeIndex.map(p => `<option value="${p.name}"></option>`).join('');
-}
-function findPlaceByName(q){
-  q = (q||'').toLowerCase().trim();
-  return placeIndex.find(p => p.name.toLowerCase()===q) || placeIndex.find(p => p.name.toLowerCase().includes(q));
+function haversine(lat1,lon1,lat2,lon2){
+  const toRad = d => d*Math.PI/180, R=6371.0088;
+  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
 }
 
-// --- Routing graph
 function buildRoadGraph(gj){
-  const nodes=[], adj=[], keyIndex=new Map();
+  const nodes=[], adj=[]; const keyIndex=new Map();
   function key(lon,lat){ return lon.toFixed(6)+','+lat.toFixed(6); }
-  function addNode(lon,lat){ const k=key(lon,lat); if (keyIndex.has(k)) return keyIndex.get(k); const idx=nodes.length; nodes.push([lat,lon]); keyIndex.set(k,idx); adj[idx]=[]; return idx; }
+  function addNode(lon,lat){ const k=key(lon,lat); if(keyIndex.has(k)) return keyIndex.get(k); const idx=nodes.length; nodes.push([lat,lon]); keyIndex.set(k,idx); adj[idx]=[]; return idx; }
   function addEdge(a,b,w,terrain){ adj[a].push({to:b,w,terrain}); adj[b].push({to:a,w,terrain}); }
-  for (const f of (gj.features||[])){ if (!f.geometry||f.geometry.type!=='LineString') continue; const terrain=(f.properties&&f.properties.terrain)||'flat'; const coords=f.geometry.coordinates; for(let i=1;i<coords.length;i++){ const [lon1,lat1]=coords[i-1], [lon2,lat2]=coords[i]; const a=addNode(lon1,lat1), b=addNode(lon2,lat2); addEdge(a,b,haversine(lat1,lon1,lat2,lon2), terrain); } }
+  for (const f of (gj.features||[])){
+    if (!f.geometry || f.geometry.type!=='LineString') continue;
+    const terrain = (f.properties && f.properties.terrain) ? f.properties.terrain : 'flat';
+    const coords=f.geometry.coordinates;
+    for (let i=1;i<coords.length;i++){
+      const [lon1,lat1]=coords[i-1], [lon2,lat2]=coords[i];
+      const a=addNode(lon1,lat1), b=addNode(lon2,lat2);
+      const w=haversine(lat1,lon1,lat2,lon2);
+      addEdge(a,b,w,terrain);
+    }
+  }
   return {nodes, adj};
 }
-function nearestNodeIdx(graph, lat, lon){ let best=-1, bestD=1e9; for (let i=0;i<graph.nodes.length;i++){ const [nlat,nlon]=graph.nodes[i]; const d=haversine(lat,lon,nlat,nlon); if (d<bestD){bestD=d;best=i;} } return best; }
-function dijkstra(graph, s, t){
-  const N=graph.nodes.length, dist=new Array(N).fill(Infinity), prev=new Array(N).fill(-1), used=new Array(N).fill(false);
-  dist[s]=0;
-  for (let it=0; it<N; it++){ let u=-1, best=Infinity; for (let i=0;i<N;i++){ if(!used[i] && dist[i]<best){ best=dist[i]; u=i; } } if (u===-1||u===t) break; used[u]=true; for (const e of graph.adj[u]){ const alt=dist[u]+e.w; if (alt<dist[e.to]){ dist[e.to]=alt; prev[e.to]=u; } } }
-  if (dist[t]===Infinity) return null; const path=[]; let u=t; while(u!==-1){ path.push(u); u=prev[u]; } path.reverse(); return path;
+
+function nearestNodeIdx(graph, lat, lon){
+  let best=-1, bestD=1e12;
+  for (let i=0;i<graph.nodes.length;i++){
+    const [nlat,nlon]=graph.nodes[i];
+    const d=haversine(lat,lon,nlat,nlon);
+    if (d<bestD){bestD=d;best=i;}
+  }
+  return best;
 }
+
+function dijkstra(graph, s, t){
+  const N=graph.nodes.length;
+  const dist=new Array(N).fill(Infinity), prev=new Array(N).fill(-1), used=new Array(N).fill(false);
+  dist[s]=0;
+  for (let it=0; it<N; it++){
+    let u=-1, best=Infinity;
+    for (let i=0;i<N;i++){ if(!used[i] && dist[i]<best){ best=dist[i]; u=i; } }
+    if (u===-1) break;
+    if (u===t) break;
+    used[u]=true;
+    for (const e of graph.adj[u]){
+      const alt=dist[u]+e.w;
+      if (alt<dist[e.to]){ dist[e.to]=alt; prev[e.to]=u; }
+    }
+  }
+  if (dist[t]===Infinity) return null;
+  const path=[]; let u=t; while(u!==-1){ path.push(u); u=prev[u]; } path.reverse(); return path;
+}
+
 function routeViaRoads(graph, A, B){
-  if (!graph||!graph.nodes.length) return null;
-  const nodes = graph.nodes.slice(), adj = graph.adj.map(a=>a.slice());
-  const idxA = nodes.length, idxB = nodes.length+1;
-  nodes.push([A.lat,A.lng]); adj[idxA]=[]; nodes.push([B.lat,B.lng]); adj[idxB]=[];
-  const nA = nearestNodeIdx(graph, A.lat, A.lng), nB = nearestNodeIdx(graph, B.lat, B.lng);
-  function connect(u,v){ const d=haversine(nodes[u][0],nodes[u][1],nodes[v][0],nodes[v][1]); adj[u].push({to:v,w:d,terrain:'flat'}); adj[v].push({to:u,w:d,terrain:'flat'}); }
-  if (nA>=0) connect(idxA, nA); if (nB>=0) connect(idxB, nB);
-  const path = dijkstra({nodes,adj}, idxA, idxB); if (!path) return null;
+  if (!graph || !graph.nodes.length) return null;
+  const nodes = graph.nodes.slice(); const adj = graph.adj.map(a=>a.slice());
+  const idxA = nodes.length; nodes.push([A.lat,A.lng]); adj[idxA]=[];
+  const idxB = nodes.length; nodes.push([B.lat,B.lng]); adj[idxB]=[];
+  function connect(u,v){
+    const d=haversine(nodes[u][0],nodes[u][1],nodes[v][0],nodes[v][1]);
+    adj[u].push({to:v,w:d,terrain:'flat'}); adj[v].push({to:u,w:d,terrain:'flat'});
+  }
+  const nA = nearestNodeIdx(graph, A.lat, A.lng);
+  const nB = nearestNodeIdx(graph, B.lat, B.lng);
+  if (nA<0 || nB<0) return null;
+  connect(idxA, nA); connect(idxB, nB);
+  const p = dijkstra({nodes,adj}, idxA, idxB);
+  if (!p) return null;
   const coords=[]; const segs=[];
-  for (let i=1;i<path.length;i++){ const u=path[i-1], v=path[i]; const Axy=nodes[u], Bxy=nodes[v]; coords.push([Axy[0],Axy[1]]); const e = adj[u].find(e=>e.to===v) || {terrain:'flat', w:haversine(Axy[0],Axy[1],Bxy[0],Bxy[1])}; segs.push({from:[Axy[0],Axy[1]], to:[Bxy[0],Bxy[1]], km:e.w, terrain:e.terrain}); }
-  coords.push([nodes[path[path.length-1]][0], nodes[path[path.length-1]][1]]);
+  for (let i=1;i<p.length;i++){
+    const u=p[i-1], v=p[i];
+    const Au=nodes[u], Bv=nodes[v];
+    coords.push([Au[0],Au[1]]);
+    const e = adj[u].find(e=>e.to===v) || {terrain:'flat', w:haversine(Au[0],Au[1],Bv[0],Bv[1])};
+    segs.push({from:[Au[0],Au[1]], to:[Bv[0],Bv[1]], km:e.w, terrain:e.terrain});
+  }
+  coords.push([nodes[p[p.length-1]][0], nodes[p[p.length-1]][1]]);
   return { coords, segs };
 }
-function routeStraight(A,B){ return { coords:[[A.lat,A.lng],[B.lat,B.lng]], segs:[{from:[A.lat,A.lng],to:[B.lat,B.lng],km:haversine(A.lat,A.lng,B.lat,B.lng), terrain:'flat'}] }; }
 
-function totalHours(segs, kmhForTerrain){ let H=0; for (const s of segs){ H += s.km / kmhForTerrain(s.terrain); } return H; }
 function interpolate(A,B,t){ return [ A[0]+t*(B[0]-A[0]), A[1]+t*(B[1]-A[1]) ]; }
+function totalHours(segs, kmhForTerrain){ let H=0; for (const s of segs) H += s.km / kmhForTerrain(s.terrain); return H; }
 function placeStopsByTime(segs, hoursPerDay, kmhForTerrain){
-  let hoursAcc=0, next=hoursPerDay, pts=[];
-  for (const s of segs){ const v=kmhForTerrain(s.terrain), segH=s.km/v;
-    while (hoursAcc+segH >= next-1e-9){ const need=next-hoursAcc; const t=need/segH; pts.push( interpolate(s.from,s.to,t) ); next += hoursPerDay; }
+  let hoursAcc=0, nextStopAt=hoursPerDay; const stops=[];
+  for (const s of segs){
+    const v=kmhForTerrain(s.terrain); const segH=s.km/v;
+    while (hoursAcc+segH >= nextStopAt-1e-9){
+      const need=nextStopAt-hoursAcc; const t=need/segH; stops.push(interpolate(s.from,s.to,t)); nextStopAt += hoursPerDay;
+    }
     hoursAcc += segH;
   }
-  return pts;
+  return stops;
 }
 
-let roadGraph=null, routeLayer=null, segLayer=null, nightStopsLayer=null, markerA=null, markerB=null;
-let A=null, B=null, picking='';
+let roadGraph=null, layersRouteSeg=null, routeLayer=null, nightStopsLayer=null, breakStopsLayer=null;
+let A=null, B=null;
 
+function styleForRouteSeg(terrain){
+  if (terrain==='mountain') return { color:'#a33', weight:4, dashArray:'6,4' };
+  return { color:'#333', weight:3 };
+}
 function drawRouteSegments(route){
-  if (segLayer) map.removeLayer(segLayer); segLayer=L.layerGroup();
-  for (const s of route.segs){ L.polyline([s.from,s.to], s.terrain==='mountain'? {color:'#a33',weight:4, dashArray:'6,4'} : {color:'#333',weight:3} ).addTo(segLayer); }
-  segLayer.addTo(map);
+  if (layersRouteSeg){ map.removeLayer(layersRouteSeg); layersRouteSeg=null; }
+  layersRouteSeg = L.layerGroup();
+  for (const s of route.segs){ L.polyline([s.from, s.to], styleForRouteSeg(s.terrain)).addTo(layersRouteSeg); }
+  layersRouteSeg.addTo(map);
 }
 
 function showRoute(route, mode, autoMountain){
-  if (routeLayer) { map.removeLayer(routeLayer); routeLayer=null; }
-  routeLayer = L.polyline(route.coords, { color:'#000', weight:2, opacity:0 }).addTo(map);
-  drawRouteSegments(route);
-  map.fitBounds(routeLayer.getBounds(), { padding:[20,20] });
-
-  const season=document.getElementById('season').value;
-  function kmhForTerrain(terrain){ if (mode==='trireme'){ let v=SPEEDS.trireme.kmh; if(season==='winter') v*=0.85; return v; } if (autoMountain && terrain==='mountain') return SPEEDS.mountain_pass.kmh; return SPEEDS[mode].kmh; }
-  const HPD = (mode==='trireme')? SPEEDS.trireme.hoursPerDay : SPEEDS[mode].hoursPerDay;
+  if (routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
+  routeLayer = L.polyline(route.coords, { color:'#444', weight:2, opacity:0.7 }).addTo(map);
+  map.fitBounds(routeLayer.getBounds(), { padding:[30,30] });
+  // Speed per terrain
+  const season = document.getElementById('season').value;
+  function kmhForTerrain(terrain){
+    if (mode==='trireme'){ let v=SPEEDS.trireme.kmh; if (season==='winter') v*=0.85; return v; }
+    if (autoMountain && terrain==='mountain') return SPEEDS.mountain_pass.kmh;
+    return SPEEDS[mode].kmh;
+  }
+  const baseHPD = (mode==='trireme') ? SPEEDS.trireme.hoursPerDay : SPEEDS[mode].hoursPerDay;
   const kmTotal = route.segs.reduce((a,s)=>a+s.km,0);
-  const roman = kmTotal/CONST.ROMAN_MILE_KM, stadia = (kmTotal*1000)/CONST.GREEK_STADION_M;
+  const roman = kmTotal / CONST.ROMAN_MILE_KM;
+  const stadia = (kmTotal*1000) / CONST.GREEK_STADION_M;
   const H = totalHours(route.segs, kmhForTerrain);
-  const days=Math.floor(H/HPD), hours=Math.round(H-days*HPD);
-  const restNights = Math.max(0, Math.ceil(H/HPD)-1);
-  const nightStops = placeStopsByTime(route.segs, HPD, kmhForTerrain);
-
-  if (nightStopsLayer) map.removeLayer(nightStopsLayer); nightStopsLayer=L.layerGroup();
-  nightStops.forEach((p,i)=> L.circleMarker([p[0],p[1]], {radius:5,color:'#b00',fillColor:'#e33',fillOpacity:0.9}).bindTooltip('Paradas nocturnas #'+(i+1)).addTo(nightStopsLayer));
-  nightStopsLayer.addTo(map);
-
-  document.getElementById('summary').innerHTML = '<div><strong>Distancia:</strong> '+kmTotal.toFixed(2)+' km · '+roman.toFixed(2)+' millas romanas · '+Math.round(stadia)+' estadios</div><div><strong>Tiempo estimado:</strong> '+days+' d + '+hours+' h — Noches de descanso: '+restNights+'</div>';
+  const days = Math.floor(H / baseHPD);
+  const hours = Math.round(H - days*baseHPD);
+  const restNights = Math.max(0, Math.ceil(H / baseHPD) - 1);
+  const nightStops = placeStopsByTime(route.segs, baseHPD, kmhForTerrain);
+  if (nightStopsLayer) map.removeLayer(nightStopsLayer);
+  nightStopsLayer = L.layerGroup(); nightStops.forEach((p,i)=>{ L.circleMarker(p,{radius:5,color:'#b00',fillColor:'#e33',fillOpacity:0.9}).addTo(nightStopsLayer); }); nightStopsLayer.addTo(map);
+  document.getElementById('summary').innerHTML = `
+    <div><strong>${t('distance')}:</strong> ${kmTotal.toFixed(2)} km · ${roman.toFixed(2)} ${t('roman_miles')} · ${Math.round(stadia)} ${t('greek_stadia')}</div>
+    <div><strong>${t('time_estimate')}:</strong> ${days} d + ${hours} h — ${t('rest_nights')}: ${restNights}</div>
+  `;
 }
 
-function setPicking(which){ picking=which; document.getElementById('status').innerText = (which==='A')? 'Selecciona punto A en el mapa' : 'Selecciona punto B en el mapa'; map.getContainer().style.cursor='crosshair'; }
-function clearAll(){ picking=''; document.getElementById('status').innerText='Listo'; map.getContainer().style.cursor=''; if(markerA){map.removeLayer(markerA);markerA=null;} if(markerB){map.removeLayer(markerB);markerB=null;} if(routeLayer){map.removeLayer(routeLayer);routeLayer=null;} if(segLayer){map.removeLayer(segLayer);segLayer=null;} if(nightStopsLayer){map.removeLayer(nightStopsLayer);nightStopsLayer=null;} A=B=null; document.getElementById('coordsA').innerText='A: —'; document.getElementById('coordsB').innerText='B: —'; }
+function fillSuggestions(list, ul){
+  ul.innerHTML = '';
+  list.slice(0,50).forEach(obj=>{
+    const li=document.createElement('li'); li.textContent = `${obj.name}`; li.addEventListener('click', ()=>{
+      ul.style.display='none';
+      if (ul.id==='sugO') document.getElementById('origin').value=obj.name;
+      else document.getElementById('dest').value=obj.name;
+      const ll = obj.coords; if (ul.id==='sugO') setA(ll[1], ll[0]); else setB(ll[1], ll[0]);
+    });
+    ul.appendChild(li);
+  });
+  ul.style.display = list.length? 'block':'none';
+}
 
-// UI bindings
-document.getElementById('btnA').addEventListener('click', ()=> setPicking('A'));
-document.getElementById('btnB').addEventListener('click', ()=> setPicking('B'));
-document.getElementById('btnClear').addEventListener('click', clearAll);
-document.getElementById('btnCalc').addEventListener('click', ()=>{
-  if (!A||!B) return;
-  const follow = document.getElementById('chk-roads').checked;
-  const autoM = document.getElementById('chk-auto').checked;
-  const mode = document.getElementById('mode').value;
-  let route = follow? routeViaRoads(roadGraph, A, B) : routeStraight(A,B);
-  if (!route) route = routeStraight(A,B);
-  showRoute(route, mode, autoM);
-});
+let gazetteer=[];
+function buildGazetteer(){
+  function pushFrom(gj){
+    (gj.features||[]).forEach(f=>{
+      const p=f.properties||{}; const g=f.geometry;
+      if (g && g.type==='Point'){ gazetteer.push({ name:p.name||p.id, coords:[g.coordinates[1], g.coordinates[0]] }); }
+    });
+  }
+  pushFrom(allGeojson.settlements);
+  pushFrom(allGeojson.ports);
+}
 
-map.on('click', (e)=>{
-  if (!picking) return;
-  if (picking==='A'){ A={lat:e.latlng.lat,lng:e.latlng.lng}; if(markerA) map.removeLayer(markerA); markerA=L.marker([A.lat,A.lng]).addTo(map).bindTooltip('A'); document.getElementById('coordsA').innerText='A: '+A.lat.toFixed(4)+', '+A.lng.toFixed(4); }
-  else if (picking==='B'){ B={lat:e.latlng.lat,lng:e.latlng.lng}; if(markerB) map.removeLayer(markerB); markerB=L.marker([B.lat,B.lng]).addTo(map).bindTooltip('B'); document.getElementById('coordsB').innerText='B: '+B.lat.toFixed(4)+', '+B.lng.toFixed(4); }
-  picking=''; document.getElementById('status').innerText='Listo'; map.getContainer().style.cursor='';
-});
+function setA(lon, lat){
+  A = {lat:lat, lng:lon};
+  document.getElementById('coordA').textContent = `A: ${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+}
+function setB(lon, lat){
+  B = {lat:lat, lng:lon};
+  document.getElementById('coordB').textContent = `B: ${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+}
 
-// Text search to set A/B
-document.getElementById('btnSetA').addEventListener('click', ()=>{
-  const q=document.getElementById('origin').value; const p=findPlaceByName(q); if(!p) return alert('Escribe un topónimo válido'); A={lat:p.lat,lng:p.lon}; if(markerA) map.removeLayer(markerA); markerA=L.marker([A.lat,A.lng]).addTo(map).bindTooltip('A'); document.getElementById('coordsA').innerText='A: '+A.lat.toFixed(4)+', '+A.lng.toFixed(4); map.setView([A.lat,A.lng], 8);
-});
-document.getElementById('btnSetB').addEventListener('click', ()=>{
-  const q=document.getElementById('destination').value; const p=findPlaceByName(q); if(!p) return alert('Escribe un topónimo válido'); B={lat:p.lat,lng:p.lon}; if(markerB) map.removeLayer(markerB); markerB=L.marker([B.lat,B.lng]).addTo(map).bindTooltip('B'); document.getElementById('coordsB').innerText='B: '+B.lat.toFixed(4)+', '+B.lng.toFixed(4); map.setView([B.lat,B.lng], 8);
-});
+function wireUI(){
+  // texts
+  document.getElementById('lang').value='es'; lang='es'; updateTexts();
+  // slider
+  const year=document.getElementById('year'); const yd=document.getElementById('year-display');
+  year.addEventListener('input', ()=>{ yd.textContent=year.value; refreshVisibility(); });
+  // lang
+  document.getElementById('lang').addEventListener('change', e=>{ lang=e.target.value; updateTexts(); });
+  // basemap
+  document.getElementById('basemap').addEventListener('change', e=> setBasemap(e.target.value));
+  // suggestions
+  const origin=document.getElementById('origin'), dest=document.getElementById('dest'), sugO=document.getElementById('sugO'), sugD=document.getElementById('sugD');
+  origin.addEventListener('input', ()=>{
+    const q = origin.value.toLowerCase().trim();
+    const list = gazetteer.filter(g => g.name.toLowerCase().includes(q));
+    fillSuggestions(list, sugO);
+  });
+  dest.addEventListener('input', ()=>{
+    const q = dest.value.toLowerCase().trim();
+    const list = gazetteer.filter(g => g.name.toLowerCase().includes(q));
+    fillSuggestions(list, sugD);
+  });
+  // set buttons
+  document.getElementById('btnSetA').addEventListener('click', ()=>{
+    const q=origin.value.toLowerCase(); const f=gazetteer.find(g=>g.name.toLowerCase()===q);
+    if (f) setA(f.coords[1], f.coords[0]);
+  });
+  document.getElementById('btnSetB').addEventListener('click', ()=>{
+    const q=dest.value.toLowerCase(); const f=gazetteer.find(g=>g.name.toLowerCase()===q);
+    if (f) setB(f.coords[1], f.coords[0]);
+  });
+  // calc + clear
+  document.getElementById('btnCalc').addEventListener('click', ()=>{
+    document.getElementById('summary').textContent='';
+    if (!A || !B){ document.getElementById('status').textContent=t('status_pickA'); return; }
+    const mode=document.getElementById('mode').value;
+    const auto=document.getElementById('chk-auto').checked;
+    const route = routeViaRoads(roadGraph, A, B);
+    if (!route){ document.getElementById('status').textContent = t('no_route'); return; }
+    drawRouteSegments(route);
+    showRoute(route, mode, auto);
+    document.getElementById('status').textContent = t('status_ready');
+  });
+  document.getElementById('btnClear').addEventListener('click', ()=>{ location.reload(); });
+}
 
-// Init
 (async function init(){
-  try{
-    i18n.es = await loadJSON('i18n/es.json');
-    i18n.en = await loadJSON('i18n/en.json');
-    updateTexts();
-    await loadLayers();
-    const roads = allGeo.roads || {features:[]};
-    roadGraph = buildRoadGraph(roads);
-  } catch(err){ console.error(err); alert('Error cargando datos: '+err.message); }
+  i18n.es = await loadJSON('i18n/es.json');
+  i18n.en = await loadJSON('i18n/en.json');
+  await loadLayers();
+  updateTexts();
+  refreshVisibility();
+  roadGraph = buildRoadGraph(allGeojson.roads);
+  buildGazetteer();
+  wireUI();
+  document.getElementById('status').textContent = t('status_ready');
 })();
 </script>
 </body>
