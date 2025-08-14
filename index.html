@@ -1,104 +1,134 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Mapa histórico — Rutas MVP</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    html, body, #map { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, sans-serif; }
-    #map { position: absolute; top: 0; left: 280px; right: 0; bottom: 0; }
-    .sidebar { position:absolute; top:0; left:0; bottom:0; width:280px; background:#fffef6; border-right:1px solid #ddd; z-index:999; display:flex; flex-direction:column; }
-    .side-head { padding:10px; border-bottom:1px solid #eee; }
-    .side-body { padding:10px; overflow:auto; gap:10px; display:flex; flex-direction:column; }
-    .group label { display:block; font-size:12px; color:#444; margin-bottom:4px; }
-    input[type=range] { width: 100%; }
-    input[type=text], select { width:100%; padding:8px; border-radius:8px; border:1px solid #ccc; }
-    button { padding:8px 10px; border-radius:8px; border:1px solid #ccc; background:#fff; cursor:pointer; }
-    button:active { transform: translateY(1px); }
-    .status { font-size:12px; color:#333; padding:6px 8px; background:#f5f2e8; border:1px solid #e6e1d3; border-radius:8px; }
-    .legend small { color:#666; }
-    .coord { font-size:12px; color:#333; }
-    .row { display:flex; gap:6px; align-items:center; }
-    .chip { display:inline-block; padding:2px 6px; border:1px solid #aaa; border-radius:999px; font-size:12px; background:#fff; }
-    .result { font-size:13px; padding:8px; background:#fff; border:1px solid #ddd; border-radius:8px; }
-    .suggestions { position:relative; }
-    .suggestions ul { position:absolute; left:0; right:0; top:100%; z-index:1000; background:#fff; border:1px solid #ddd; border-radius:8px; margin:2px 0 0; padding:6px; list-style:none; max-height:180px; overflow:auto; }
-    .suggestions li { padding:4px 6px; cursor:pointer; }
-    .suggestions li:hover { background:#f0f0f0; }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Mapa histórico — Rutas MVP (v6)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  html, body { height:100%; margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, sans-serif; }
+  #app { display:grid; grid-template-columns: 340px 1fr; height:100%; }
+  #sidebar { background:#fffdf7; border-right:1px solid #ddd; padding:10px; overflow:auto; }
+  #map { width:100%; height:100%; }
+  .section { border:1px solid #e5e1d8; border-radius:10px; padding:10px; margin-bottom:10px; background:#fffeFA; }
+  .row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  label { font-size:13px; color:#333; }
+  input[type=range] { width: 220px; }
+  select, input[type=text], button { padding:8px 10px; border-radius:8px; border:1px solid #ccc; background:#fff; font-size:14px; }
+  button { cursor:pointer; }
+  button:active { transform: translateY(1px); }
+  .small { font-size:12px; color:#666; }
+  .coords { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size:12px; }
+  .legend-item { font-size:12px; margin:2px 0; }
+  .toast { position: fixed; top:10px; right:10px; background:#fee; color:#900; border:1px solid #d88; padding:8px 10px; border-radius:8px; z-index:9999; box-shadow:0 2px 8px rgba(0,0,0,0.15); }
+  .seg-llano { color:#111; }
+  .seg-montana { color:#a33; text-decoration: underline; text-decoration-style: dashed; }
+</style>
 </head>
 <body>
-<div class="sidebar">
-  <div class="side-head"><strong id="title"></strong></div>
-  <div class="side-body">
-    <div class="group">
-      <label id="lbl-year"></label>
-      <div class="row"><input id="year" type="range" min="201" max="300" value="218" step="1"/><span style="width:40px;text-align:right" id="year-display">218</span> <span id="era-display"></span></div>
-    </div>
-    <div class="group">
-      <label id="lbl-lang"></label>
-      <select id="lang"><option value="es" selected>ES</option><option value="en">EN</option></select>
-    </div>
-    <div class="group">
-      <label id="lbl-season"></label>
-      <select id="season"><option value="summer">summer</option><option value="winter">winter</option></select>
-    </div>
-    <div class="group">
-      <label id="lbl-basemap"></label>
-      <select id="basemap"><option value="osm" selected>osm</option><option value="sat">sat</option></select>
-    </div>
-    <div class="group">
-      <label id="lbl-modes"></label>
-      <select id="mode">
-        <option value="foot_baggage">foot_baggage</option>
-        <option value="foot_double">foot_double</option>
-        <option value="foot_forced">foot_forced</option>
-        <option value="mountain_pass">mountain_pass</option>
-        <option value="trireme">trireme</option>
-      </select>
+<div id="app">
+  <div id="sidebar">
+    <div class="section">
       <div class="row">
-        <label class="chip"><input type="checkbox" id="chk-auto" checked/> <span id="lbl-auto"></span></label>
+        <strong id="title"></strong>
+      </div>
+      <div class="row">
+        <label id="lbl-lang"></label>
+        <select id="lang">
+          <option value="es">ES</option>
+          <option value="en">EN</option>
+        </select>
+      </div>
+      <div class="row">
+        <label id="lbl-basemap"></label>
+        <select id="basemap">
+          <option value="osm">osm</option>
+          <option value="sat">sat</option>
+        </select>
+      </div>
+      <div class="row">
+        <label id="lbl-season"></label>
+        <select id="season">
+          <option value="summer">summer</option>
+          <option value="winter">winter</option>
+        </select>
       </div>
     </div>
-    <div class="group">
-      <label id="lbl-origin"></label>
-      <div class="suggestions"><input id="origin" type="text" placeholder="" autocomplete="off"/><ul id="sugO" style="display:none"></ul></div>
-      <div class="row"><button id="btnSetA"></button> <span class="coord" id="coordA"></span></div>
-    </div>
-    <div class="group">
-      <label id="lbl-dest"></label>
-      <div class="suggestions"><input id="dest" type="text" placeholder="" autocomplete="off"/><ul id="sugD" style="display:none"></ul></div>
-      <div class="row"><button id="btnSetB"></button> <span class="coord" id="coordB"></span></div>
-    </div>
-    <div class="row">
-      <button id="btnCalc"></button>
-      <button id="btnClear"></button>
-    </div>
-    <div class="status" id="status"></div>
-    <div class="result" id="summary"></div>
 
-    <div class="legend">
+    <div class="section">
+      <div class="row">
+        <label id="lbl-year"></label>
+        <input id="year" type="range" min="201" max="300" value="218" step="1">
+        <span id="year-display" class="coords">218</span> <span id="era-display"></span>
+      </div>
+      <div class="small">201–300 a.C. (negativos internamente)</div>
+    </div>
+
+    <div class="section">
+      <div class="row"><label id="lbl-modes"></label></div>
+      <div class="row">
+        <select id="mode">
+          <option value="foot_baggage">foot_baggage</option>
+          <option value="foot_double">foot_double</option>
+          <option value="foot_forced">foot_forced</option>
+          <option value="mountain_pass">mountain_pass</option>
+          <option value="trireme">trireme</option>
+        </select>
+        <label><input type="checkbox" id="chk-auto" checked> <span id="lbl-auto"></span></label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="row">
+        <label id="lbl-origin"></label>
+        <input id="txtOrigin" type="text" list="placeList" placeholder="Tarraco...">
+        <button id="btnSetA"></button>
+      </div>
+      <div class="row">
+        <label id="lbl-dest"></label>
+        <input id="txtDest" type="text" list="placeList" placeholder="Gades...">
+        <button id="btnSetB"></button>
+      </div>
+      <datalist id="placeList"></datalist>
+      <div class="row">
+        <button id="btnA"></button>
+        <span class="coords" id="outA"></span>
+      </div>
+      <div class="row">
+        <button id="btnB"></button>
+        <span class="coords" id="outB"></span>
+      </div>
+      <div class="row">
+        <button id="btnCalc"></button>
+        <button id="btnClear"></button>
+      </div>
+    </div>
+
+    <div class="section" id="legend">
       <div><strong id="legend-title"></strong></div>
-      <div><span class="chip">■</span> <span id="legend-rivers"></span></div>
-      <div><span class="chip">—</span> <span id="legend-roads"></span></div>
-      <div><span class="chip">≈</span> <span id="legend-coasts"></span></div>
-      <div><span class="chip">·</span> <span id="legend-settlements"></span></div>
-      <div><span class="chip">□</span> <span id="legend-polities"></span></div>
-      <div><span class="chip">⇢</span> <span id="legend-maritime"></span></div>
+      <div class="legend-item">■ <span id="legend-rivers"></span></div>
+      <div class="legend-item">— <span id="legend-roads"></span></div>
+      <div class="legend-item">≈ <span id="legend-coasts"></span></div>
+      <div class="legend-item">· <span id="legend-settlements"></span></div>
+      <div class="legend-item">□ <span id="legend-polities"></span></div>
+      <div class="legend-item">⇢ <span id="legend-maritime"></span></div>
+      <div class="legend-item"><span class="seg-llano">━━</span> llano — <span class="seg-montana">━━</span> montaña</div>
     </div>
-  </div>
-</div>
 
-<div id="map"></div>
+    <div class="section" id="results"></div>
+  </div>
+
+  <div id="map"></div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const VERSION = '1755131517';
-const CONST = { ROMAN_MILE_KM: 1.48, GREEK_STADION_M: 185 };
-let i18n={}; let lang='es';
+'use strict';
 
-// Speeds per earlier spec
+const CONST = { ROMAN_MILE_KM: 1.48, GREEK_STADION_M: 185 };
+let i18n = {}; let lang='es';
+
+// Speeds
 const SPEEDS = {
   foot_baggage:  { kmh: 23.68/6, hoursPerDay: 6,  breaksPerDay: 0 },
   foot_double:   { kmh: 47.36/12, hoursPerDay: 12, breaksPerDay: 1 },
@@ -107,86 +137,90 @@ const SPEEDS = {
   trireme:       { kmh: 9.26,     hoursPerDay: 12, breaksPerDay: 0 }
 };
 
-async function loadJSON(u){ const r=await fetch(u+`?v=${VERSION}`); return r.json(); }
+function showToast(msg){
+  const t = document.createElement('div');
+  t.className='toast'; t.innerText=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.remove(); }, 4500);
+}
+
+async function loadJSON(u){
+  const r = await fetch(u + (u.includes('?')?'&':'?') + 'v=' + Date.now());
+  if (!r.ok) throw new Error('HTTP '+r.status);
+  return r.json();
+}
 function t(k){ return (i18n[lang] && i18n[lang][k]) || k; }
+
 function updateTexts(){
   document.getElementById('title').innerText = t('app_title');
+  document.getElementById('lbl-lang').innerText = t('language')+':';
+  document.getElementById('lbl-basemap').innerText = t('basemap')+':';
+  document.getElementById('lbl-season').innerText = t('season')+':';
   document.getElementById('lbl-year').innerText = t('year')+':';
   document.getElementById('era-display').innerText = t('era_bc');
-  document.getElementById('lbl-lang').innerText = t('language')+':';
-  document.getElementById('lbl-season').innerText = t('season')+':';
-  document.getElementById('lbl-basemap').innerText = t('basemap')+':';
-  document.getElementById('basemap').querySelector('option[value="osm"]').textContent = t('osm');
-  document.getElementById('basemap').querySelector('option[value="sat"]').textContent = t('sat');
+  document.getElementById('lbl-modes').innerText = t('modes')+':';
+  document.getElementById('lbl-auto').innerText = t('auto_mountain');
+  document.getElementById('lbl-origin').innerText = t('origin')+':';
+  document.getElementById('lbl-dest').innerText = t('destination')+':';
+  document.getElementById('btnSetA').innerText = t('set_A');
+  document.getElementById('btnSetB').innerText = t('set_B');
+  document.getElementById('btnA').innerText = t('pick_A');
+  document.getElementById('btnB').innerText = t('pick_B');
+  document.getElementById('btnCalc').innerText = t('calculate');
+  document.getElementById('btnClear').innerText = t('clear');
   document.getElementById('legend-title').innerText = t('legend');
   document.getElementById('legend-rivers').innerText = t('rivers');
   document.getElementById('legend-roads').innerText = t('roads');
-  document.getElementById('legend-polities').innerText = t('polities');
   document.getElementById('legend-coasts').innerText = t('coasts');
   document.getElementById('legend-settlements').innerText = t('settlements');
+  document.getElementById('legend-polities').innerText = t('polities');
   document.getElementById('legend-maritime').innerText = t('maritime_routes');
-  document.getElementById('lbl-modes').innerText = t('modes')+':';
-  document.getElementById('lbl-origin').innerText = t('origin');
-  document.getElementById('lbl-dest').innerText = t('destination');
-  document.getElementById('origin').placeholder = t('enter_place');
-  document.getElementById('dest').placeholder = t('enter_place');
-  document.getElementById('btnSetA').textContent = t('set_A');
-  document.getElementById('btnSetB').textContent = t('set_B');
-  document.getElementById('btnCalc').textContent = t('calculate');
-  document.getElementById('btnClear').textContent = t('clear');
-  document.getElementById('lbl-auto').innerText = t('auto_mountain');
+
+  // modes select labels
+  const mSel=document.getElementById('mode');
+  mSel.querySelector('option[value="foot_baggage"]').textContent=t('foot_baggage');
+  mSel.querySelector('option[value="foot_double"]').textContent=t('foot_double');
+  mSel.querySelector('option[value="foot_forced"]').textContent=t('foot_forced');
+  mSel.querySelector('option[value="mountain_pass"]').textContent=t('mountain_pass');
+  mSel.querySelector('option[value="trireme"]').textContent=t('trireme');
 }
 
-function normEra(e){
+// Timeline helpers
+function eraNorm(e){
   if(!e) return 'BC';
-  e = (''+e).toLowerCase();
-  if (e.includes('bc') || e.includes('a.c')) return 'BC';
-  if (e.includes('ac') || e.includes('ad') || e.includes('d.c')) return 'AC';
+  e = (''+e).toUpperCase().replaceAll('.','');
+  if (e.includes('BC')) return 'BC';
+  if (e.includes('AC') || e.includes('AD') || e.includes('DC') || e.includes('D C')) return 'AD';
   return 'BC';
 }
-
-function isActiveByTemporal(p, yBC){
-  const sy = Number(p.start_year ?? 300);
-  const se = normEra(p.start_era ?? 'BC');
-  const ey = Number(p.end_year ?? 201);
-  const ee = normEra(p.end_era ?? 'BC');
-  const startBC = (se==='BC') ? sy : 0;
-  const endBC   = (ee==='BC') ? ey : 0;
-  return (yBC <= startBC) && (yBC >= endBC);
+function toYearNumber(year, era){
+  const y = parseInt(year,10);
+  const E = eraNorm(era);
+  return E==='BC' ? -Math.abs(y) : Math.abs(y);
+}
+function selectedYear(){
+  const y = parseInt(document.getElementById('year').value,10);
+  return -y; // slider 201..300 a.C. -> negative years
+}
+function isActiveByTemporal(p, ySel){
+  const sy = toYearNumber(p.start_year||300, p.start_era||'BC');
+  const ey = toYearNumber(p.end_year||201, p.end_era||'BC');
+  // active if ySel between [min(sy,ey), max(sy,ey)]
+  const lo = Math.min(sy,ey), hi = Math.max(sy,ey);
+  return (ySel >= lo && ySel <= hi);
 }
 
-function styleFor(feature){
-  const p = feature.properties||{};
-  if (p.type==='rio') return { color:'#1f78b4', weight:3, opacity:0.9 };
-  if (p.type==='costa') return { color:'#3957a6', weight:2, opacity:0.5, dashArray:'4,6' };
-  if (p.type==='calzada') return { color:'#6b4e16', weight:2.5 };
-  if (p.type==='camino') return { color:'#8a6d3b', weight:2, dashArray:'6,6' };
-  if (feature.geometry.type==='Polygon'){
-    const tok=p.color_token||'default'; const colors={iberian:'#e7c0a8',default:'#d9d2c6'};
-    return { color:'#634b36', weight:1, fillColor:colors[tok]||colors.default, fillOpacity:0.3 };
-  }
-  return { radius:5, color:'#333', fillColor:'#ffe08a', fillOpacity:0.9 };
-}
-function pointToLayer(f,ll){ return L.circleMarker(ll, styleFor(f)); }
-function onEachFeature(f,layer){
-  const p=f.properties||{};
-  const tip = `<strong>${p.name||p.id||'—'}</strong>`;
-  layer.bindTooltip(tip);
+// Map + layers
+let map, baseOSM, baseSAT, currentBase='osm';
+let layers={}, allGeojson={}, roadGraph=null;
+
+function initMap(){
+  map = L.map('map', { minZoom:5, maxZoom:12, center:[40,-3.5], zoom:6 });
+  baseOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors', maxZoom:19 });
+  baseSAT = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:'Esri, Maxar, Earthstar Geographics', maxZoom:19 });
+  baseOSM.addTo(map);
 }
 
-let map = L.map('map', { minZoom:5, maxZoom:12, zoomControl:true }).setView([40,-3.5],6);
-let baseLayer=null;
-const basemapOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'&copy; OpenStreetMap', maxZoom:19 });
-const basemapSAT = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{ attribution:'Esri, Maxar', maxZoom:19, noWrap:false });
-
-function setBasemap(which){
-  if (baseLayer) map.removeLayer(baseLayer);
-  baseLayer = (which==='sat') ? basemapSAT : basemapOSM;
-  baseLayer.addTo(map);
-}
-setBasemap('osm');
-
-let layers={}, allGeojson={};
 async function loadLayers(){
   const files = {
     settlements:'data/toponimos.geojson',
@@ -199,55 +233,95 @@ async function loadLayers(){
     uncertainty:'data/incertidumbre.geojson'
   };
   for (const [k,u] of Object.entries(files)){
-    const gj = await loadJSON(u);
-    allGeojson[k]=gj;
-    const layer = L.geoJSON(gj,{style:styleFor,pointToLayer,onEachFeature});
-    layers[k]=layer;
+    try {
+      const gj = await loadJSON(u);
+      allGeojson[k]=gj;
+      let layer;
+      if (k==='polities'){
+        layer = L.geoJSON(gj,{
+          style:(f)=>({ color:'#634b36', weight:1, fillColor:'#e7c0a8', fillOpacity:0.3 }),
+          onEachFeature:(f,l)=> l.bindTooltip((f.properties && (f.properties.name||f.properties.id)) || '')
+        });
+      } else if (k==='rivers'){
+        layer = L.geoJSON(gj,{ style:(f)=>({ color:'#1f78b4', weight:3, opacity:0.9 }) });
+      } else if (k==='coasts'){
+        layer = L.geoJSON(gj,{ style:(f)=>({ color:'#3957a6', weight:2, opacity:0.6, dashArray:'4,6' }) });
+      } else if (k==='roads'){
+        layer = L.geoJSON(gj,{ style:(f)=>{
+          const terr=(f.properties&&f.properties.terrain)||'flat';
+          return terr==='mountain' ? { color:'#a33', weight:2.5, dashArray:'6,4' } : { color:'#333', weight:2.5 };
+        }});
+      } else {
+        layer = L.geoJSON(gj,{
+          pointToLayer:(f,latlng)=> L.circleMarker(latlng,{ radius:5, color:'#333', fillColor:'#ffe08a', fillOpacity:0.9 })
+        });
+      }
+      layers[k]=layer;
+    } catch(e){
+      console.error('Error', u, e);
+      showToast(t('data_error')+': '+u);
+    }
   }
+  // Default visible layers
   layers.rivers.addTo(map);
   layers.roads.addTo(map);
   layers.settlements.addTo(map);
   layers.polities.addTo(map);
 }
 
-function bcYear(){ return parseInt(document.getElementById('year').value,10); }
 function refreshVisibility(){
-  const y = bcYear();
+  const ySel = selectedYear();
   for (const [k,layer] of Object.entries(layers)){
+    layer.clearLayers();
     const gj = allGeojson[k];
-    const filtered = { type:'FeatureCollection', features: (gj.features||[]).filter(f => isActiveByTemporal(f.properties||{}, y)) };
-    layer.clearLayers(); layer.addData(filtered);
+    const filtered = { type:'FeatureCollection', features: (gj.features||[]).filter(f => isActiveByTemporal(f.properties||{}, ySel)) };
+    layer.addData(filtered);
   }
 }
 
+function swapBasemap(which){
+  if (which===currentBase) return;
+  if (which==='sat'){
+    if (map.hasLayer(baseOSM)) map.removeLayer(baseOSM);
+    baseSAT.addTo(map);
+  } else {
+    if (map.hasLayer(baseSAT)) map.removeLayer(baseSAT);
+    baseOSM.addTo(map);
+  }
+  currentBase = which;
+}
+
+// Build road graph (with terrain on edges)
 function haversine(lat1,lon1,lat2,lon2){
   const toRad = d => d*Math.PI/180, R=6371.0088;
   const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
   const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
   return 2*R*Math.asin(Math.sqrt(a));
 }
-
 function buildRoadGraph(gj){
-  const nodes=[], adj=[]; const keyIndex=new Map();
+  const nodes=[], adj=[], keyIndex=new Map();
   function key(lon,lat){ return lon.toFixed(6)+','+lat.toFixed(6); }
-  function addNode(lon,lat){ const k=key(lon,lat); if(keyIndex.has(k)) return keyIndex.get(k); const idx=nodes.length; nodes.push([lat,lon]); keyIndex.set(k,idx); adj[idx]=[]; return idx; }
+  function addNode(lon,lat){
+    const k=key(lon,lat);
+    if (keyIndex.has(k)) return keyIndex.get(k);
+    const idx=nodes.length; nodes.push([lat,lon]); keyIndex.set(k,idx); adj[idx]=[]; return idx;
+  }
   function addEdge(a,b,w,terrain){ adj[a].push({to:b,w,terrain}); adj[b].push({to:a,w,terrain}); }
   for (const f of (gj.features||[])){
     if (!f.geometry || f.geometry.type!=='LineString') continue;
-    const terrain = (f.properties && f.properties.terrain) ? f.properties.terrain : 'flat';
     const coords=f.geometry.coordinates;
+    const terr=(f.properties&&f.properties.terrain)||'flat';
     for (let i=1;i<coords.length;i++){
       const [lon1,lat1]=coords[i-1], [lon2,lat2]=coords[i];
       const a=addNode(lon1,lat1), b=addNode(lon2,lat2);
       const w=haversine(lat1,lon1,lat2,lon2);
-      addEdge(a,b,w,terrain);
+      addEdge(a,b,w,terr);
     }
   }
   return {nodes, adj};
 }
-
 function nearestNodeIdx(graph, lat, lon){
-  let best=-1, bestD=1e12;
+  let best=-1, bestD=1e15;
   for (let i=0;i<graph.nodes.length;i++){
     const [nlat,nlon]=graph.nodes[i];
     const d=haversine(lat,lon,nlat,nlon);
@@ -255,10 +329,11 @@ function nearestNodeIdx(graph, lat, lon){
   }
   return best;
 }
-
 function dijkstra(graph, s, t){
   const N=graph.nodes.length;
-  const dist=new Array(N).fill(Infinity), prev=new Array(N).fill(-1), used=new Array(N).fill(false);
+  const dist=new Array(N).fill(Infinity);
+  const prev=new Array(N).fill(-1);
+  const used=new Array(N).fill(false);
   dist[s]=0;
   for (let it=0; it<N; it++){
     let u=-1, best=Infinity;
@@ -272,183 +347,258 @@ function dijkstra(graph, s, t){
     }
   }
   if (dist[t]===Infinity) return null;
-  const path=[]; let u=t; while(u!==-1){ path.push(u); u=prev[u]; } path.reverse(); return path;
+  const path=[]; let u=t;
+  while (u!==-1){ path.push(u); u=prev[u]; }
+  path.reverse();
+  return path;
 }
 
 function routeViaRoads(graph, A, B){
-  if (!graph || !graph.nodes.length) return null;
-  const nodes = graph.nodes.slice(); const adj = graph.adj.map(a=>a.slice());
+  // Build augmented graph with two virtual nodes A,B connected to nearest real nodes
+  const nodes = graph.nodes.slice();
+  const adj = graph.adj.map(a=>a.slice());
   const idxA = nodes.length; nodes.push([A.lat,A.lng]); adj[idxA]=[];
   const idxB = nodes.length; nodes.push([B.lat,B.lng]); adj[idxB]=[];
+  const nA = nearestNodeIdx(graph, A.lat, A.lng);
+  const nB = nearestNodeIdx(graph, B.lat, B.lng);
   function connect(u,v){
     const d=haversine(nodes[u][0],nodes[u][1],nodes[v][0],nodes[v][1]);
     adj[u].push({to:v,w:d,terrain:'flat'}); adj[v].push({to:u,w:d,terrain:'flat'});
   }
-  const nA = nearestNodeIdx(graph, A.lat, A.lng);
-  const nB = nearestNodeIdx(graph, B.lat, B.lng);
-  if (nA<0 || nB<0) return null;
-  connect(idxA, nA); connect(idxB, nB);
+  if (nA>=0) connect(idxA, nA);
+  if (nB>=0) connect(idxB, nB);
   const p = dijkstra({nodes,adj}, idxA, idxB);
   if (!p) return null;
-  const coords=[]; const segs=[];
+  // Build route segments with terrain from edges
+  const segs=[]; const coords=[];
   for (let i=1;i<p.length;i++){
     const u=p[i-1], v=p[i];
     const Au=nodes[u], Bv=nodes[v];
-    coords.push([Au[0],Au[1]]);
     const e = adj[u].find(e=>e.to===v) || {terrain:'flat', w:haversine(Au[0],Au[1],Bv[0],Bv[1])};
     segs.push({from:[Au[0],Au[1]], to:[Bv[0],Bv[1]], km:e.w, terrain:e.terrain});
+    coords.push([Au[0],Au[1]]);
   }
   coords.push([nodes[p[p.length-1]][0], nodes[p[p.length-1]][1]]);
   return { coords, segs };
 }
 
-function interpolate(A,B,t){ return [ A[0]+t*(B[0]-A[0]), A[1]+t*(B[1]-A[1]) ]; }
-function totalHours(segs, kmhForTerrain){ let H=0; for (const s of segs) H += s.km / kmhForTerrain(s.terrain); return H; }
+// Time-based stops
+function interpolate(A, B, t){ return [ A[0] + t*(B[0]-A[0]), A[1] + t*(B[1]-A[1]) ]; }
+function totalHours(segs, kmhForTerrain){ let H=0; for (const s of segs){ H += s.km / kmhForTerrain(s.terrain); } return H; }
 function placeStopsByTime(segs, hoursPerDay, kmhForTerrain){
-  let hoursAcc=0, nextStopAt=hoursPerDay; const stops=[];
+  const stops=[]; let hoursAcc=0; let nextStopAt=hoursPerDay;
   for (const s of segs){
-    const v=kmhForTerrain(s.terrain); const segH=s.km/v;
-    while (hoursAcc+segH >= nextStopAt-1e-9){
-      const need=nextStopAt-hoursAcc; const t=need/segH; stops.push(interpolate(s.from,s.to,t)); nextStopAt += hoursPerDay;
+    const v = kmhForTerrain(s.terrain); const segH = s.km / v;
+    while (hoursAcc + segH >= nextStopAt - 1e-9){
+      const need = nextStopAt - hoursAcc; const t = need / segH;
+      stops.push( interpolate(s.from, s.to, t) );
+      nextStopAt += hoursPerDay;
     }
     hoursAcc += segH;
   }
   return stops;
 }
-
-let roadGraph=null, layersRouteSeg=null, routeLayer=null, nightStopsLayer=null, breakStopsLayer=null;
-let A=null, B=null;
-
-function styleForRouteSeg(terrain){
-  if (terrain==='mountain') return { color:'#a33', weight:4, dashArray:'6,4' };
-  return { color:'#333', weight:3 };
+function placeMidBreaks(segs, hoursPerDay, breaksPerDay, kmhForTerrain){
+  if (breaksPerDay<=0) return [];
+  const breaks=[];
+  const totalH = totalHours(segs, kmhForTerrain);
+  const dayCount = Math.ceil(totalH / hoursPerDay);
+  const targets=[];
+  for (let d=0; d<dayCount; d++){
+    for (let j=1; j<=breaksPerDay; j++){
+      targets.push(d*hoursPerDay + (j*(hoursPerDay/(breaksPerDay+1))));
+    }
+  }
+  let hAcc=0, idx=0;
+  for (const s of segs){
+    const v = kmhForTerrain(s.terrain); const segH = s.km / v;
+    while (idx<targets.length && hAcc + segH >= targets[idx] - 1e-9){
+      const need = targets[idx] - hAcc; const t = need / segH;
+      breaks.push( interpolate(s.from, s.to, t) );
+      idx++;
+    }
+    hAcc += segH;
+    if (idx>=targets.length) break;
+  }
+  return breaks;
 }
-function drawRouteSegments(route){
-  if (layersRouteSeg){ map.removeLayer(layersRouteSeg); layersRouteSeg=null; }
-  layersRouteSeg = L.layerGroup();
-  for (const s of route.segs){ L.polyline([s.from, s.to], styleForRouteSeg(s.terrain)).addTo(layersRouteSeg); }
-  layersRouteSeg.addTo(map);
+
+// UI state
+let picking='', A=null, B=null;
+let markerA=null, markerB=null, routeLayer=null, segLayer=null, nightStopsLayer=null, breakStopsLayer=null;
+
+function updateABOut(){
+  const outA = document.getElementById('outA'), outB = document.getElementById('outB');
+  outA.textContent = A ? `${A.lat.toFixed(4)}, ${A.lng.toFixed(4)}` : '—';
+  outB.textContent = B ? `${B.lat.toFixed(4)}, ${B.lng.toFixed(4)}` : '—';
 }
 
-function showRoute(route, mode, autoMountain){
-  if (routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
-  routeLayer = L.polyline(route.coords, { color:'#444', weight:2, opacity:0.7 }).addTo(map);
+function drawRoute(route, mode, autoMountain){
+  // remove old layers
+  for (const Lyr of [routeLayer, segLayer, nightStopsLayer, breakStopsLayer]){ if (Lyr && map.hasLayer(Lyr)) map.removeLayer(Lyr); }
+  routeLayer=segLayer=nightStopsLayer=breakStopsLayer=null;
+
+  // per-terrain poly segments
+  segLayer = L.layerGroup().addTo(map);
+  for (const s of route.segs){
+    const st = (s.terrain==='mountain' && autoMountain) ? { color:'#a33', weight:4, dashArray:'6,4' } : { color:'#333', weight:3 };
+    L.polyline([s.from, s.to], st).addTo(segLayer);
+  }
+  routeLayer = L.polyline(route.coords, { opacity:0 }).addTo(map);
   map.fitBounds(routeLayer.getBounds(), { padding:[30,30] });
-  // Speed per terrain
+
+  // speed resolver
   const season = document.getElementById('season').value;
   function kmhForTerrain(terrain){
-    if (mode==='trireme'){ let v=SPEEDS.trireme.kmh; if (season==='winter') v*=0.85; return v; }
+    if (mode==='trireme'){
+      let v=SPEEDS.trireme.kmh; if (season==='winter') v*=0.85; return v;
+    }
     if (autoMountain && terrain==='mountain') return SPEEDS.mountain_pass.kmh;
     return SPEEDS[mode].kmh;
   }
-  const baseHPD = (mode==='trireme') ? SPEEDS.trireme.hoursPerDay : SPEEDS[mode].hoursPerDay;
+  const HPD = (mode==='trireme') ? SPEEDS.trireme.hoursPerDay : SPEEDS[mode].hoursPerDay;
+
   const kmTotal = route.segs.reduce((a,s)=>a+s.km,0);
+  const H = totalHours(route.segs, kmhForTerrain);
+  const days = Math.floor(H / HPD);
+  const hours = Math.round(H - days*HPD);
+  const restNights = Math.max(0, Math.ceil(H/HPD)-1);
+
   const roman = kmTotal / CONST.ROMAN_MILE_KM;
   const stadia = (kmTotal*1000) / CONST.GREEK_STADION_M;
-  const H = totalHours(route.segs, kmhForTerrain);
-  const days = Math.floor(H / baseHPD);
-  const hours = Math.round(H - days*baseHPD);
-  const restNights = Math.max(0, Math.ceil(H / baseHPD) - 1);
-  const nightStops = placeStopsByTime(route.segs, baseHPD, kmhForTerrain);
-  if (nightStopsLayer) map.removeLayer(nightStopsLayer);
-  nightStopsLayer = L.layerGroup(); nightStops.forEach((p,i)=>{ L.circleMarker(p,{radius:5,color:'#b00',fillColor:'#e33',fillOpacity:0.9}).addTo(nightStopsLayer); }); nightStopsLayer.addTo(map);
-  document.getElementById('summary').innerHTML = `
+
+  // stops
+  const nightStops = placeStopsByTime(route.segs, HPD, kmhForTerrain);
+  nightStopsLayer = L.layerGroup().addTo(map);
+  nightStops.forEach((p,i)=>{
+    L.circleMarker(p,{radius:5,color:'#b00',fillColor:'#e33',fillOpacity:0.9}).bindTooltip(`${t('night_stops')} #${i+1}`).addTo(nightStopsLayer);
+  });
+  const breaksPerDay = (mode==='trireme')?0:SPEEDS[mode].breaksPerDay;
+  const midBreaks = placeMidBreaks(route.segs, HPD, breaksPerDay, kmhForTerrain);
+  breakStopsLayer = L.layerGroup().addTo(map);
+  midBreaks.forEach((p,i)=>{
+    L.circleMarker(p,{radius:4,color:'#cc9a00',fillColor:'#ffd000',fillOpacity:0.9}).bindTooltip(`${t('mid_breaks')} #${i+1}`).addTo(breakStopsLayer);
+  });
+
+  document.getElementById('results').innerHTML = `
     <div><strong>${t('distance')}:</strong> ${kmTotal.toFixed(2)} km · ${roman.toFixed(2)} ${t('roman_miles')} · ${Math.round(stadia)} ${t('greek_stadia')}</div>
-    <div><strong>${t('time_estimate')}:</strong> ${days} d + ${hours} h — ${t('rest_nights')}: ${restNights}</div>
+    <div><strong>${t('time_estimate')}:</strong> ${days} d + ${hours} h — ${t('rest_nights')}: ${restNights} · ${t('day_breaks')}: ${breaksPerDay||0}/día</div>
   `;
 }
 
-function fillSuggestions(list, ul){
-  ul.innerHTML = '';
-  list.slice(0,50).forEach(obj=>{
-    const li=document.createElement('li'); li.textContent = `${obj.name}`; li.addEventListener('click', ()=>{
-      ul.style.display='none';
-      if (ul.id==='sugO') document.getElementById('origin').value=obj.name;
-      else document.getElementById('dest').value=obj.name;
-      const ll = obj.coords; if (ul.id==='sugO') setA(ll[1], ll[0]); else setB(ll[1], ll[0]);
-    });
-    ul.appendChild(li);
-  });
-  ul.style.display = list.length? 'block':'none';
+function onCalculate(){
+  if (!A || !B){ showToast('Marca A y B o usa Origen/Destino'); return; }
+  const ySel = selectedYear();
+  // require roads visible at this time (filter vias by time)
+  const roadsGJ = allGeojson.roads;
+  const activeRoads = { type:'FeatureCollection', features:(roadsGJ.features||[]).filter(f=>isActiveByTemporal(f.properties||{}, ySel)) };
+  const graph = buildRoadGraph(activeRoads);
+  if (!graph.nodes.length){ showToast(t('no_route')); return; }
+  const route = routeViaRoads(graph, A, B);
+  if (!route){ showToast(t('no_route')); return; }
+  const mode = document.getElementById('mode').value;
+  const autoMountain = document.getElementById('chk-auto').checked;
+  drawRoute(route, mode, autoMountain);
 }
 
-let gazetteer=[];
-function buildGazetteer(){
-  function pushFrom(gj){
-    (gj.features||[]).forEach(f=>{
-      const p=f.properties||{}; const g=f.geometry;
-      if (g && g.type==='Point'){ gazetteer.push({ name:p.name||p.id, coords:[g.coordinates[1], g.coordinates[0]] }); }
-    });
-  }
-  pushFrom(allGeojson.settlements);
-  pushFrom(allGeojson.ports);
-}
-
-function setA(lon, lat){
-  A = {lat:lat, lng:lon};
-  document.getElementById('coordA').textContent = `A: ${lat.toFixed(3)}, ${lon.toFixed(3)}`;
-}
-function setB(lon, lat){
-  B = {lat:lat, lng:lon};
-  document.getElementById('coordB').textContent = `B: ${lat.toFixed(3)}, ${lon.toFixed(3)}`;
-}
-
-function wireUI(){
-  // texts
-  document.getElementById('lang').value='es'; lang='es'; updateTexts();
-  // slider
-  const year=document.getElementById('year'); const yd=document.getElementById('year-display');
+function attachUI(){
+  // year
+  const year = document.getElementById('year'), yd = document.getElementById('year-display');
   year.addEventListener('input', ()=>{ yd.textContent=year.value; refreshVisibility(); });
+
   // lang
-  document.getElementById('lang').addEventListener('change', e=>{ lang=e.target.value; updateTexts(); });
+  const langSel = document.getElementById('lang');
+  langSel.value='es'; lang='es';
+  langSel.addEventListener('change', e=>{ lang=e.target.value; updateTexts(); });
+
   // basemap
-  document.getElementById('basemap').addEventListener('change', e=> setBasemap(e.target.value));
-  // suggestions
-  const origin=document.getElementById('origin'), dest=document.getElementById('dest'), sugO=document.getElementById('sugO'), sugD=document.getElementById('sugD');
-  origin.addEventListener('input', ()=>{
-    const q = origin.value.toLowerCase().trim();
-    const list = gazetteer.filter(g => g.name.toLowerCase().includes(q));
-    fillSuggestions(list, sugO);
+  document.getElementById('basemap').addEventListener('change', e=> swapBasemap(e.target.value) );
+
+  // pick A/B by click
+  document.getElementById('btnA').addEventListener('click', ()=>{ picking='A'; showToast(t('tip_pick')); });
+  document.getElementById('btnB').addEventListener('click', ()=>{ picking='B'; showToast(t('tip_pick')); });
+  map.on('click', (e)=>{
+    if (!picking) return;
+    const lat = e.latlng.lat, lng = e.latlng.lng;
+    if (picking==='A'){
+      A = {lat,lng}; if (markerA) map.removeLayer(markerA); markerA = L.marker([lat,lng]).addTo(map).bindTooltip('A').openTooltip();
+    } else {
+      B = {lat,lng}; if (markerB) map.removeLayer(markerB); markerB = L.marker([lat,lng]).addTo(map).bindTooltip('B').openTooltip();
+    }
+    picking=''; updateABOut();
   });
-  dest.addEventListener('input', ()=>{
-    const q = dest.value.toLowerCase().trim();
-    const list = gazetteer.filter(g => g.name.toLowerCase().includes(q));
-    fillSuggestions(list, sugD);
-  });
-  // set buttons
+
+  // set A/B from text (autocomplete list populated later)
   document.getElementById('btnSetA').addEventListener('click', ()=>{
-    const q=origin.value.toLowerCase(); const f=gazetteer.find(g=>g.name.toLowerCase()===q);
-    if (f) setA(f.coords[1], f.coords[0]);
+    const q = document.getElementById('txtOrigin').value.trim().toLowerCase();
+    const p = findPlace(q);
+    if (p){ A={lat:p[1], lng:p[0]}; if (markerA) map.removeLayer(markerA); markerA=L.marker([A.lat,A.lng]).addTo(map).bindTooltip('A').openTooltip(); updateABOut(); map.panTo([A.lat,A.lng]); }
+    else showToast('No encontrado: '+q);
   });
   document.getElementById('btnSetB').addEventListener('click', ()=>{
-    const q=dest.value.toLowerCase(); const f=gazetteer.find(g=>g.name.toLowerCase()===q);
-    if (f) setB(f.coords[1], f.coords[0]);
+    const q = document.getElementById('txtDest').value.trim().toLowerCase();
+    const p = findPlace(q);
+    if (p){ B={lat:p[1], lng:p[0]}; if (markerB) map.removeLayer(markerB); markerB=L.marker([B.lat,B.lng]).addTo(map).bindTooltip('B').openTooltip(); updateABOut(); map.panTo([B.lat,B.lng]); }
+    else showToast('No encontrado: '+q);
   });
-  // calc + clear
-  document.getElementById('btnCalc').addEventListener('click', ()=>{
-    document.getElementById('summary').textContent='';
-    if (!A || !B){ document.getElementById('status').textContent=t('status_pickA'); return; }
-    const mode=document.getElementById('mode').value;
-    const auto=document.getElementById('chk-auto').checked;
-    const route = routeViaRoads(roadGraph, A, B);
-    if (!route){ document.getElementById('status').textContent = t('no_route'); return; }
-    drawRouteSegments(route);
-    showRoute(route, mode, auto);
-    document.getElementById('status').textContent = t('status_ready');
+
+  // calc & clear
+  document.getElementById('btnCalc').addEventListener('click', onCalculate);
+  document.getElementById('btnClear').addEventListener('click', ()=>{
+    for (const Lyr of [markerA, markerB, routeLayer, segLayer, nightStopsLayer, breakStopsLayer]){ if (Lyr && map.hasLayer(Lyr)) map.removeLayer(Lyr); }
+    markerA=markerB=routeLayer=segLayer=nightStopsLayer=breakStopsLayer=null; A=B=null; updateABOut();
   });
-  document.getElementById('btnClear').addEventListener('click', ()=>{ location.reload(); });
+}
+
+// Autocomplete from toponyms + ports
+let placesIndex=[];
+function buildPlacesIndex(){
+  const list = [];
+  function add(name, coords){
+    if (!name) return;
+    list.push({name:name.toLowerCase(), coords});
+  }
+  function fromFeature(f){
+    const c = f.geometry.coordinates; const p = f.properties||{};
+    add(p.name, [c[0],c[1]]);
+    if (p.alt_names){
+      p.alt_names.split(/[;,]/).forEach(x=> add(x.trim(), [c[0],c[1]]) );
+    }
+  }
+  (allGeojson.settlements.features||[]).forEach(fromFeature);
+  (allGeojson.ports.features||[]).forEach(fromFeature);
+  placesIndex = list;
+  const dl = document.getElementById('placeList');
+  dl.innerHTML='';
+  // unique names limited
+  const seen = new Set();
+  list.slice(0,400).forEach(it=>{
+    if (seen.has(it.name)) return;
+    seen.add(it.name);
+    const opt = document.createElement('option'); opt.value = it.name; dl.appendChild(opt);
+  });
+}
+function findPlace(q){
+  if (!q) return null;
+  const hit = placesIndex.find(it => it.name===q) || placesIndex.find(it=> it.name.includes(q));
+  return hit ? hit.coords : null;
 }
 
 (async function init(){
-  i18n.es = await loadJSON('i18n/es.json');
-  i18n.en = await loadJSON('i18n/en.json');
-  await loadLayers();
+  try{
+    // i18n
+    i18n.es = await loadJSON('i18n/es.json');
+    i18n.en = await loadJSON('i18n/en.json');
+  }catch(e){ showToast(t('data_error')+': i18n'); }
   updateTexts();
+
+  initMap();
+  await loadLayers();
   refreshVisibility();
+  buildPlacesIndex();
   roadGraph = buildRoadGraph(allGeojson.roads);
-  buildGazetteer();
-  wireUI();
-  document.getElementById('status').textContent = t('status_ready');
+  attachUI();
+  updateABOut();
 })();
 </script>
 </body>
