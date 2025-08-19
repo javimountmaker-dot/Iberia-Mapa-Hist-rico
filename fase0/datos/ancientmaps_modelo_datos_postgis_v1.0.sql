@@ -1,0 +1,2 @@
+-- Modelo PostGIS v1.0 (sin año 0)
+-- Tablas: places, roads, polities

@@ -1,0 +1,12 @@
+name: Validate Fase0
+on:
+  pull_request:
+    paths:
+      - 'fase0/**'
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: List files
+        run: ls -R fase0 || true
