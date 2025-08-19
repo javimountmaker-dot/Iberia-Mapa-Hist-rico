@@ -1,0 +1,18 @@
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Python/QGIS caches
+__pycache__/
+*.pyc
+
+# Datos y artefactos pesados (Fase 1+)
+data/
+tiles/
+*.mbtiles
+*.tif
+*.tiff
+*.zip
+*.7z
+*.tar
+*.tar.gz
